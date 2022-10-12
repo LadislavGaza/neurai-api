@@ -10,4 +10,4 @@ $ docker-compose build
 $ docker-compose up
 ```
 
-REST API launches on `localhost:8000`.
+REST API launches on `localhost:8080`.
