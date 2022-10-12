@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: config/Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - "config/variables.env"
+    volumes:
+      - .:/neurai-api
