@@ -7,6 +7,21 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - "config/variables.env"
+      - "config/api.env"
     volumes:
       - .:/neurai-api
+    depends_on:
+      - "db"
+  db:
+    image: postgres:latest
+    env_file:
+      - "config/db.env"
+    restart: always
+    volumes:
+      - ./config/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"     # !Use only for debug conn
+
+volumes:
+  pgdata:
