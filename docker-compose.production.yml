@@ -14,7 +14,8 @@ services:
     depends_on:
       - "db"
     networks:
-      - vue-app
+      - be
+      - db
     restart: always
   db:
     container_name: neurai_db
@@ -25,6 +26,8 @@ services:
     volumes:
       - ./config/init.sql:/docker-entrypoint-initdb.d/init.sql
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - db
     ports:
       - "5432:5432"     # !Use only for debug conn
 
@@ -37,6 +40,6 @@ volumes:
       device: '/mnt/postgres'
 
 networks:
-  vue-app:
-    external:
-      name: vue-app-network
+  be:
+    name: neurai-be-network
+  db:
