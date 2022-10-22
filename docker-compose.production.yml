@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   api:
+    container_name: neurai_api
     build:
       context: .
       dockerfile: config/Dockerfile
@@ -12,8 +13,11 @@ services:
       - .:/neurai-api
     depends_on:
       - "db"
+    networks:
+      - vue-app
     restart: always
   db:
+    container_name: neurai_db
     image: postgres:latest
     env_file:
       - "config/db.env"
@@ -31,3 +35,8 @@ volumes:
       type: 'none'
       o: 'bind'
       device: '/mnt/postgres'
+
+networks:
+  vue-app:
+    external:
+      name: vue-app-network
