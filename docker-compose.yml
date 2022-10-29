@@ -14,15 +14,14 @@ services:
       - "db"
     restart: always
   db:
-    image: postgres:latest
+    image: postgres:15
     env_file:
       - "config/db.env"
-    restart: always
     volumes:
-      - ./config/init.sql:/docker-entrypoint-initdb.d/init.sql
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"     # !Use only for debug conn
+      - "5432:5432"
+    restart: always
 
 volumes:
   pgdata:
