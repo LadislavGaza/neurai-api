@@ -12,8 +12,9 @@ engine = create_async_engine(os.environ.get('DB_URL'), future=True)
 Base = declarative_base()
 
 
-class Example(Base):
-    __tablename__ = 'example'
+class User(Base):
+    __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
+    username = Column(String, nullable=False, unique=True)
+    password = Column(String, nullable=False)
