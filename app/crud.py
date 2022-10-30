@@ -23,5 +23,5 @@ async def create_user(user: s.UserCreate):
     async with async_session() as session:
         async with session.begin():
             session.add(user_model)
-            session.commit()
+            await session.commit()
 

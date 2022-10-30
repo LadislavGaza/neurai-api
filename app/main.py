@@ -1,4 +1,9 @@
-from fastapi import FastAPI, status, HTTPException
+from fastapi import (
+    FastAPI,
+    status,
+    HTTPException,
+    Response
+)
 from sqlalchemy.exc import IntegrityError
 
 import app.model as m
@@ -28,3 +33,5 @@ async def registration(user: s.UserCreate,
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail='User with this name already exists'
         )
+
+    return Response(status_code=status.HTTP_201_CREATED)
