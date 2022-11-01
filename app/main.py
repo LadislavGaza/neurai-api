@@ -4,6 +4,7 @@ from fastapi import (
     HTTPException,
     Response
 )
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import IntegrityError
 
 import app.model as m
@@ -20,6 +21,20 @@ api = FastAPI(
         "name": "Team 23",
         "url": "https://team23-22.studenti.fiit.stuba.sk/neurai",
     }
+)
+
+origins = [
+    'https://team23-22.studenti.fiit.stuba.sk'
+    'http://localhost',
+    'http://localhost:4040',
+]
+
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
