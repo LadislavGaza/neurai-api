@@ -7,9 +7,9 @@ import app.schema as s
 
 
 async def create_user(user: s.UserCreate):
-    hashed_password = argon2.hash(user.password)
+    hashed_password = argon2.hash(user.email)
     user_model = m.User(
-        username=user.username,
+        email=user.email,
         password=hashed_password
     )
 
