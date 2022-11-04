@@ -28,3 +28,11 @@ $ pip install sqlalchemy asyncpg alembic
 $ export DB_URL="postgresql+asyncpg://user:password@localhost/db"
 $ alembic -c config/alembic.ini revision --autogenerate -m "message"
 ```
+
+#### Run migrations
+
+Execute into container and run alembic. Environment variable should already be set.
+```bash
+$ docker-compose exec api bash
+(docker)# alembic -c config/alembic.ini upgrade head
+```

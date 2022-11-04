@@ -1,16 +1,9 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 
 class UserCreate(BaseModel):
-    username: str = Field(
-        ...,
-        max_length=200,
-        title='Username'
-    )
-    password: str = Field(
-        ...,
-        title='Plain text password'
-    )
+    email: EmailStr = Field(..., title='Email address')
+    password: str = Field(..., title='Plain text password')
 
     class Config:
         orm_mode = True
