@@ -101,8 +101,8 @@ async def login(user: s.UserCredential):
     return Response(status_code=status.HTTP_401_UNAUTHORIZED)
 
 
-@api.get('/test')
-async def test(dependencies=[Depends(validate_token)]):
+@api.get('/test', dependencies=[Depends(validate_token)])
+async def test():
     return {'email': 'abc@abc.sk'}
 
 
