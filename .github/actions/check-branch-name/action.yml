@@ -1,0 +1,18 @@
+name: Check Branch Name Action
+description: Match branch name by regex
+author: Lubomir Dlhy
+inputs:
+  branch:
+    description: Branch name
+    required: true
+  regex:
+    description: Regex for checking the branch name
+    required: true
+outputs:
+  type:
+    description: Type of the branch (enhc,fix,feat,master)
+  semantic-type:
+    description: Semantic type of the branch for release (minor / patch)
+runs:
+  using: node16
+  main: index.js
