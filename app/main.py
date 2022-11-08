@@ -9,6 +9,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import JSONResponse
 
 from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
@@ -97,8 +98,11 @@ async def login(user: s.UserCredential):
         }
         token = jwt.encode(payload, JWT_SECRET, 'HS256')
         return {'token': token}
-
-    return Response(status_code=status.HTTP_401_UNAUTHORIZED)
+    
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, 
+        detail='Wrong email or password'
+    )
 
 
 @api.get('/test', dependencies=[Depends(validate_token)])
