@@ -17,7 +17,7 @@ jobs:
         id: branch-name-check
         with:
           branch: ${{ github.head_ref || github.ref_name }}
-          regex: '^NAI-(\d+)\/(feat|fix|enhc)$'
+          regex: '^NAI-(\d+)\/(feat|fix|enhc)\d*$'
 
       - name: Install Python 3.10
         uses: actions/setup-python@v3
