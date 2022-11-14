@@ -1,4 +1,7 @@
+import json
 import os
+
+import google_auth_oauthlib.flow
 import jwt
 from fastapi import (
     FastAPI,
@@ -10,6 +13,11 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
+from google.auth.exceptions import RefreshError
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from app.crud import update_user_refresh_token, get_user_by_id
 
 from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
@@ -49,6 +57,13 @@ api.add_middleware(
 )
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
+flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+    'config/WEB_credentials.json',
+    SCOPES,
+    redirect_uri=os.environ.get('REDIRECT_URL')
+)
+
 
 async def validate_token(token: str = Depends(oauth2_scheme)):
     unauthorized = HTTPException(
@@ -62,6 +77,64 @@ async def validate_token(token: str = Depends(oauth2_scheme)):
         raise unauthorized
 
     return payload['user_id']
+
+
+async def validate_drive_token(user_id: int = Depends(validate_token)):
+    creds = None
+    f = open('config/WEB_credentials.json')
+    web_cred = json.load(f)
+    client_id = web_cred['web']['client_id']
+    client_secret = web_cred['web']['client_secret']
+    token_uri = web_cred['web']['token_uri']
+    token = ''
+
+    refresh_token = (await get_user_by_id(user_id=user_id)).refresh_token
+
+    if refresh_token:
+        creds = Credentials(
+            token,
+            refresh_token=refresh_token,
+            token_uri=token_uri,
+            client_id=client_id,
+            client_secret=client_secret,
+            scopes=SCOPES
+        )
+    try:
+        service = build('drive', 'v3', credentials=creds)
+        results = service.files().list(
+            q="mimeType = 'application/vnd.google-apps.folder' and name='NeurAI'",
+            fields="nextPageToken, files(id, name)"
+        ).execute()
+        items = results.get('files', [])
+    except RefreshError:
+        return JSONResponse(
+            content={'message': 'Google drive authorization failed', 'type': 'google'},
+            status_code=401
+        )
+
+    if not items:
+        folder_metadata = {
+            'name': 'NeurAI',
+            'mimeType': 'application/vnd.google-apps.folder'
+        }
+        service.files().create(
+            body=folder_metadata,
+            fields='id'
+        ).execute()
+
+        results = service.files().list(
+            q="mimeType = 'application/vnd.google-apps.folder' and name='NeurAI'",
+            fields="nextPageToken, files(id, name)"
+        ).execute()
+        items = results.get('files', [])
+
+        if not items:
+            return JSONResponse(
+                content={'message': 'Folder NeurAI not found'},
+                status_code=404
+            )
+
+    return creds
 
 
 @api.post('/registration')
@@ -98,9 +171,9 @@ async def login(user: s.UserCredential):
         }
         token = jwt.encode(payload, JWT_SECRET, 'HS256')
         return {'token': token}
-    
+
     raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, 
+        status_code=status.HTTP_401_UNAUTHORIZED,
         detail='Wrong email or password'
     )
 
@@ -113,3 +186,53 @@ async def test():
 @api.get('/user')
 async def user_resource(user_id: int = Depends(validate_token)):
     return {'user': user_id}
+
+
+@api.get('/google/authorize')
+async def drive_authorize():
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true'
+    )
+    return JSONResponse(
+                content={'autorization_url': authorization_url},
+                status_code=200
+            )
+
+
+@api.get('/google/authorize/code')
+async def drive_authorize_code(code: str, user_id=Depends(validate_token)):
+    flow.fetch_token(code=code)
+    creds = flow.credentials
+
+    try:
+        creds.refresh(Request())
+    except RefreshError:
+        return JSONResponse(
+            content={'message': 'Google drive authorization failed', 'type': 'google'},
+            status_code=401
+        )
+
+    refresh_token = creds.refresh_token
+    await update_user_refresh_token(user_id=user_id, refresh_token=refresh_token)
+    return JSONResponse(
+                content={'creds': creds.to_json()},
+                status_code=200
+            )
+
+
+@api.get('/google/get/files', dependencies=[Depends(validate_token)])
+async def drive_get_files(validation_output=Depends(validate_drive_token)):
+    if type(validation_output) == JSONResponse:
+        return validation_output
+
+    creds = validation_output
+    service = build('drive', 'v3', credentials=creds)
+
+    results = service.files().list(
+        q="mimeType = 'application/vnd.google-apps.folder' and name='NeurAI'",
+        fields="nextPageToken, files(id, name)"
+    ).execute()
+    items = results.get('files', [])
+
+    return {'folder': items}
