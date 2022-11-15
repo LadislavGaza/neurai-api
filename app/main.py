@@ -1,19 +1,17 @@
 import json
 import os
-
 import google_auth_oauthlib.flow
 import jwt
 from fastapi import (
     FastAPI,
     status,
-    HTTPException,
     Response,
-    Depends
+    Depends,
+    HTTPException
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
-from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -25,7 +23,15 @@ from datetime import datetime, timedelta
 
 import app.schema as s
 from app import crud
-import app.model as m
+
+
+class CustomException(Exception):
+    status_code = None
+    content = None
+
+    def __init__(self, content, status_code: int):
+        self.content = content
+        self.status_code = status_code
 
 
 # Generate with: openssl rand -hex 32
@@ -48,6 +54,28 @@ api = FastAPI(
     }
 )
 
+
+@api.exception_handler(CustomException)
+async def unicorn_exception_handler(request: Request(), exc: CustomException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=exc.content,
+    )
+
+
+@api.exception_handler(HTTPException)
+async def validation_exception_handler(request, err: HTTPException):
+    if '/google/' in str(request.url) and err.status_code==401:
+        return JSONResponse(
+            content={
+                'message': 'Authentification failed',
+                'type': 'auth'
+            },
+            status_code=401
+        )
+    return JSONResponse(status_code=err.status_code, content={"message": "Exception", "detail": err.detail})
+
+
 api.add_middleware(
     CORSMiddleware,
     allow_origins=ORIGINS,
@@ -66,10 +94,12 @@ flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
 
 
 async def validate_token(token: str = Depends(oauth2_scheme)):
-    unauthorized = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail='Invalid credentials',
-        headers={'WWW-Authenticate': 'Bearer'},
+    unauthorized = CustomException(
+        content={
+            'message': 'Invalid credentials',
+            'type': 'auth',
+            'headers': {"WWW-Authenticate": "Bearer"}},
+        status_code=401
     )
     try:
         payload = jwt.decode(token, JWT_SECRET, 'HS256')
@@ -106,8 +136,8 @@ async def validate_drive_token(user_id: int = Depends(validate_token)):
             fields="nextPageToken, files(id, name)"
         ).execute()
         items = results.get('files', [])
-    except RefreshError:
-        return JSONResponse(
+    except Exception as e:
+        raise CustomException(
             content={'message': 'Google drive authorization failed', 'type': 'google'},
             status_code=401
         )
@@ -129,7 +159,7 @@ async def validate_drive_token(user_id: int = Depends(validate_token)):
         items = results.get('files', [])
 
         if not items:
-            return JSONResponse(
+            raise CustomException(
                 content={'message': 'Folder NeurAI not found'},
                 status_code=404
             )
@@ -138,15 +168,15 @@ async def validate_drive_token(user_id: int = Depends(validate_token)):
 
 
 @api.post('/registration')
-async def registration(user: s.UserCredential,
-                       status_code=status.HTTP_201_CREATED):
+async def registration(user: s.UserCredential):
     try:
         user.password = argon2.hash(user.password)
         await crud.create_user(user)
     except IntegrityError:
-        raise HTTPException(
+
+        raise CustomException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail='User with this name already exists'
+                content={'message': 'User with this name already exists'}
         )
     return Response(status_code=status.HTTP_201_CREATED)
 
@@ -172,9 +202,9 @@ async def login(user: s.UserCredential):
         token = jwt.encode(payload, JWT_SECRET, 'HS256')
         return {'token': token}
 
-    raise HTTPException(
+    raise CustomException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail='Wrong email or password'
+        content={'message': 'Wrong email or password', 'type': 'auth'}
     )
 
 
@@ -188,7 +218,7 @@ async def user_resource(user_id: int = Depends(validate_token)):
     return {'user': user_id}
 
 
-@api.get('/google/authorize')
+@api.get('/google/authorize', dependencies=[Depends(validate_token)])
 async def drive_authorize():
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -202,13 +232,12 @@ async def drive_authorize():
 
 @api.get('/google/authorize/code')
 async def drive_authorize_code(code: str, user_id=Depends(validate_token)):
-    flow.fetch_token(code=code)
-    creds = flow.credentials
-
     try:
+        flow.fetch_token(code=code)
+        creds = flow.credentials
         creds.refresh(Request())
-    except RefreshError:
-        return JSONResponse(
+    except Exception as e:
+        raise CustomException(
             content={'message': 'Google drive authorization failed', 'type': 'google'},
             status_code=401
         )
@@ -222,11 +251,7 @@ async def drive_authorize_code(code: str, user_id=Depends(validate_token)):
 
 
 @api.get('/google/get/files', dependencies=[Depends(validate_token)])
-async def drive_get_files(validation_output=Depends(validate_drive_token)):
-    if type(validation_output) == JSONResponse:
-        return validation_output
-
-    creds = validation_output
+async def drive_get_files(creds=Depends(validate_drive_token)):
     service = build('drive', 'v3', credentials=creds)
 
     results = service.files().list(
