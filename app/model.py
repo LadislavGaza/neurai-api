@@ -4,7 +4,7 @@ from sqlalchemy import (
     Integer,
     String
 )
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.ext.asyncio import create_async_engine
 
 
