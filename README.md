@@ -4,7 +4,7 @@ Build with Python language and FastAPI web framework. It runs in ASGI web server
 
 #### Development build
 
-Run following commands:
+Set correct environment variables by using configuration templates from subfolder. Then run following commands:
 ```bash
 $ docker-compose build
 $ docker-compose up
@@ -34,5 +34,13 @@ $ alembic -c config/alembic.ini revision --autogenerate -m "message"
 Execute into container and run alembic. Environment variable should already be set.
 ```bash
 $ docker-compose exec api bash
-(docker)# alembic -c config/alembic.ini upgrade head
+(docker)$ alembic -c config/alembic.ini upgrade head
+```
+
+https://alembic.sqlalchemy.org/en/latest/cookbook.html
+In order to seed test data to database run next command instead. if you already updated schema
+to newest version you have to downgrade in order to force data seeding
+```bash
+(docker)$ alembic -c config/alembic.ini downgrade -1
+(docker)$ alembic -c config/alembic.ini -x data=true upgrade head
 ```
