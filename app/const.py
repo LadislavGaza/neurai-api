@@ -15,7 +15,7 @@ class GoogleAPI:
 
     # https://developers.google.com/identity/protocols/oauth2/web-server#creatingcred
     CREDS_FILE = 'config/web_credentials.json'
-    CREDS = {} #json.load(open(CREDS_FILE, 'r'))
+    CREDS = json.load(open(CREDS_FILE, 'r'))
     REDIRECT_URL = os.environ.get('REDIRECT_URL')
 
     DRIVE_MIME_TYPE = 'application/vnd.google-apps.folder'

@@ -172,8 +172,8 @@ async def registration(user: s.UserCredential):
     try:
         user.password = argon2.hash(user.password)
         await crud.create_user(user)
-    except IntegrityError:
 
+    except IntegrityError:
         raise APIException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 content={'message': 'User with this name already exists'}
