@@ -1,4 +1,4 @@
-"""create_pacient_table
+"""create_patient_table
 
 Revision ID: c75ee2f000a5
 Revises: 290bbfb151b1
@@ -35,7 +35,7 @@ def downgrade():
 
 
 def schema_upgrades():
-    op.create_table('pacients',
+    op.create_table('patients',
         sa.Column('id', sa.String(length=20), nullable=False),
         sa.Column('firstname', sa.String(), nullable=False),
         sa.Column('surname', sa.String(), nullable=False),
@@ -47,20 +47,20 @@ def schema_upgrades():
         sa.ForeignKeyConstraint(['modified_by'], ['users.id']),
         sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_pacients_id'), 'pacients', ['id'], unique=False)
+    op.create_index(op.f('ix_patients_id'), 'patients', ['id'], unique=False)
 
 
 def schema_downgrades():
-    op.drop_index(op.f('ix_pacients_id'), table_name='pacients')
-    op.drop_table('pacients')
+    op.drop_index(op.f('ix_patients_id'), table_name='patients')
+    op.drop_table('patients')
 
 
 def data_upgrades():
     meta = MetaData(bind=op.get_bind())
-    meta.reflect(only=('users', 'pacients'))
+    meta.reflect(only=('users', 'patients'))
 
     users_tbl = Table('users', meta)
-    pacients_tbl = Table('pacients', meta)
+    patients_tbl = Table('patients', meta)
 
     op.bulk_insert(users_tbl, [{
         'id': 1,
@@ -69,7 +69,7 @@ def data_upgrades():
     }])
 
     N = 200
-    pacients = [
+    patients = [
         {
             'id': ''.join(
                 choices(string.ascii_uppercase + string.digits, k=8)
@@ -87,8 +87,8 @@ def data_upgrades():
         }
         for i in range(N)
     ]
-    op.bulk_insert(pacients_tbl, pacients)
+    op.bulk_insert(patients_tbl, patients)
 
 
 def data_downgrades():
-    op.execute('delete from pacients')
+    op.execute('delete from patients')

@@ -10,8 +10,8 @@ class UserCredential(BaseModel):
         orm_mode = True
 
 
-class PacientSummary(BaseModel):
-    id: str = Field(..., title='Pacient unique identifier')
+class PatientSummary(BaseModel):
+    id: str = Field(..., title='Patient unique identifier')
     firstname: str
     surname: str
     created_at: datetime

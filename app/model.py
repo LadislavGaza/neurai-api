@@ -24,8 +24,8 @@ class User(Base):
     refresh_token = Column(String(512))
 
 
-class Pacient(Base):
-    __tablename__ = 'pacients'
+class Patient(Base):
+    __tablename__ = 'patients'
 
     id = Column(String(20), primary_key=True, index=True)
     firstname = Column(String, nullable=False)

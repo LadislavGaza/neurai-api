@@ -209,11 +209,11 @@ async def login(user: s.UserCredential):
     )
 
 
-@api.get('/pacients',
+@api.get('/patients',
          dependencies=[Depends(validate_token)],
-         response_model=List[s.PacientSummary])
-async def pacients_overview():
-    return (await crud.get_pacients()).all()
+         response_model=List[s.PatientSummary])
+async def patients_overview():
+    return (await crud.get_patients()).all()
 
 
 @api.get('/user')

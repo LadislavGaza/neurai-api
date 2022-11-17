@@ -25,9 +25,9 @@ async def get_user(user: s.UserCredential) -> m.User:
     return result.scalars().first()
 
 
-async def get_pacients() -> Iterable[m.Pacient]:
+async def get_patients() -> Iterable[m.Patient]:
     async with AsyncSession(m.engine) as session:
-        query = select(m.Pacient)
+        query = select(m.Patient)
         result = await session.execute(query)
 
     return result.scalars()
