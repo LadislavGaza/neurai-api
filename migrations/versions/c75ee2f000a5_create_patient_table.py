@@ -37,7 +37,7 @@ def downgrade():
 def schema_upgrades():
     op.create_table('patients',
         sa.Column('id', sa.String(length=20), nullable=False),
-        sa.Column('firstname', sa.String(), nullable=False),
+        sa.Column('forename', sa.String(), nullable=False),
         sa.Column('surname', sa.String(), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('created_by', sa.Integer(), nullable=False),
@@ -74,7 +74,7 @@ def data_upgrades():
             'id': ''.join(
                 choices(string.ascii_uppercase + string.digits, k=8)
             ),
-            'firstname': choice([
+            'forename': choice([
                 'Jozef', 'Milan', 'Štefan',
                 'Zuzana', 'Monika', 'Anna'
             ]),

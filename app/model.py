@@ -28,7 +28,7 @@ class Patient(Base):
     __tablename__ = 'patients'
 
     id = Column(String(20), primary_key=True, index=True)
-    firstname = Column(String, nullable=False)
+    forename = Column(String, nullable=False)
     surname = Column(String, nullable=False)
 
     created_at = Column(DateTime, nullable=False, default=now)
