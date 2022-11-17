@@ -4,7 +4,7 @@ Build with Python language and FastAPI web framework. It runs in ASGI web server
 
 #### Development build
 
-Run following commands:
+Set correct environment variables by using configuration templates from subfolder. Then run following commands:
 ```bash
 $ docker-compose build
 $ docker-compose up

@@ -1,5 +1,4 @@
 from sqlalchemy import select, update
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Iterable
 
@@ -36,7 +35,9 @@ async def get_patients() -> Iterable[m.Patient]:
 async def update_user_refresh_token(user_id: int, refresh_token: str):
     async with AsyncSession(m.engine) as session:
         stmt = (
-            update(m.User).where(m.User.id == user_id).values(refresh_token=refresh_token)
+            update(m.User)
+            .where(m.User.id == user_id)
+            .values(refresh_token=refresh_token)
         )
         await session.execute(stmt)
         await session.commit()
