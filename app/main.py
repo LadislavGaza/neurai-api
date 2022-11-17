@@ -63,7 +63,7 @@ flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
 
 
 @api.exception_handler(APIException)
-async def custom_exception_handler(request: Request(), exc: APIException):
+async def api_exception_handler(request: Request(), exc: APIException):
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.content,
