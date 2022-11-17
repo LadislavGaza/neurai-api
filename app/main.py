@@ -20,6 +20,7 @@ from app.crud import update_user_refresh_token, get_user_by_id
 from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
+from typing import List
 
 import app.schema as s
 from app import crud
@@ -208,9 +209,11 @@ async def login(user: s.UserCredential):
     )
 
 
-@api.get('/test', dependencies=[Depends(validate_token)])
-async def test():
-    return {'email': 'abc@abc.sk'}
+@api.get('/pacients',
+         dependencies=[Depends(validate_token)],
+         response_model=List[s.PacientSummary])
+async def pacients_overview():
+    return (await crud.get_pacients()).all()
 
 
 @api.get('/user')

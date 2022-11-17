@@ -1,6 +1,7 @@
 from sqlalchemy import select, update
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Iterable
 
 import app.model as m
 import app.schema as s
@@ -22,6 +23,14 @@ async def get_user(user: s.UserCredential) -> m.User:
         result = await session.execute(query)
 
     return result.scalars().first()
+
+
+async def get_pacients() -> Iterable[m.Pacient]:
+    async with AsyncSession(m.engine) as session:
+        query = select(m.Pacient)
+        result = await session.execute(query)
+
+    return result.scalars()
 
 
 async def update_user_refresh_token(user_id: int, refresh_token: str):
