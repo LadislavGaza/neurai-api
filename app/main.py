@@ -18,6 +18,7 @@ from googleapiclient.discovery import build
 from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
+from typing import List
 
 import app.schema as s
 from app import crud
@@ -209,6 +210,13 @@ async def login(user: s.UserCredential):
             'type': 'auth'
         }
     )
+
+
+@api.get('/patients',
+         dependencies=[Depends(validate_token)],
+         response_model=List[s.PatientSummary])
+async def patients_overview():
+    return (await crud.get_patients()).all()
 
 
 @api.get('/google/authorize', dependencies=[Depends(validate_token)])
