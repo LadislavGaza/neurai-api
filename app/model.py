@@ -37,7 +37,7 @@ class Patient(Base):
     modified_at = Column(DateTime, default=now, onupdate=now)
     modified_by = Column(Integer, ForeignKey("users.id"))
 
-    mri_files = relationship('MRIFile', back_populates='patients')
+    mri_files = relationship('MRIFile', back_populates='patient')
     creator = relationship(User, foreign_keys=[created_by])
     editor = relationship(User, foreign_keys=[modified_by])
 
@@ -46,13 +46,13 @@ class MRIFile(Base):
     __tablename__ = 'mri_files'
 
     id = Column(BigInteger, primary_key=True, index=True)
-    file_name = Column(String, nullable=False)
+    filename = Column(String, nullable=False)
     patient_id = Column(String(20), ForeignKey("patients.id"), nullable=False)
     created_at = Column(DateTime, nullable=False, default=now)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     modified_at = Column(DateTime, default=now, onupdate=now)
     modified_by = Column(Integer, ForeignKey("users.id"))
 
-    patient = relationship(Patient, back_populates='mri_files')
+    patient = relationship(Patient, foreign_keys=[patient_id], back_populates='mri_files')
     creator = relationship(User, foreign_keys=[created_by])
     editor = relationship(User, foreign_keys=[modified_by])
