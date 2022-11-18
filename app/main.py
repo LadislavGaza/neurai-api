@@ -266,6 +266,16 @@ async def drive_get_files(creds=Depends(validate_drive_token)):
     return {'folder': items}
 
 
+@api.get('/profile')
+async def profile(user_id: int = Depends(validate_token)):
+    user = await crud.get_user_by_id(user_id=user_id)
+    authorized_drive = True if user.refresh_token else False
+    return {
+        'email': user.email,
+        'authorizedDrive': authorized_drive
+    }
+
+
 @api.get('/test', dependencies=[Depends(validate_token)])
 async def test():
     return {'email': 'abc@abc.sk'}
