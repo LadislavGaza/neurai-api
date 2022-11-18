@@ -113,7 +113,7 @@ config/*.env
 config/gunicorn.conf.py
 
 #credentials
-config/WEB_credentials.json
+config/web_credentials.json
 
 # Spyder project settings
 .spyderproject

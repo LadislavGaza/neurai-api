@@ -94,11 +94,11 @@ async def validation_exception_handler(request, err: HTTPException):
 
 async def validate_token(token: str = Depends(oauth2_scheme)):
     unauthorized = APIException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
         content={
             'message': 'Invalid credentials',
             'type': 'auth'
-        },
-        status_code=401
+        }
     )
     try:
         payload = jwt.decode(token, const.JWT.SECRET, 'HS256')
@@ -255,7 +255,7 @@ async def drive_authorize_code(code: str, user_id=Depends(validate_token)):
     return {'message': 'Google authorization successful'}
 
 
-@api.get('/google/get/files', dependencies=[Depends(validate_token)])
+@api.get('/google/files', dependencies=[Depends(validate_token)])
 async def drive_get_files(creds=Depends(validate_drive_token)):
 
     service = build('drive', 'v3', credentials=creds)
@@ -266,8 +266,16 @@ async def drive_get_files(creds=Depends(validate_drive_token)):
         fields="nextPageToken, files(id, name)"
     ).execute()
     items = results.get('files', [])
+
+    # if NeurAI folder doesn't exist we need to retry authorization
+    if not items:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={'message': 'Folder NeurAI not found'},
+        )
+
     folder_id = items[0]['id']
-    q = "'" + folder_id + "' in parents"
+    q = f"'{folder_id}' in parents"
 
     # upload sample file to check if it returns list of files
     file_metadata = {
