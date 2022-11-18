@@ -1,3 +1,4 @@
+import google_auth_oauthlib.flow
 import jwt
 from fastapi import (
     FastAPI,
@@ -14,7 +15,7 @@ import google_auth_oauthlib.flow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-
+from googleapiclient.http import MediaFileUpload
 from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
@@ -62,7 +63,7 @@ flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
 
 
 @api.exception_handler(APIException)
-async def unicorn_exception_handler(request: Request(), exc: APIException):
+async def api_exception_handler(request: Request(), exc: APIException):
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.content,
@@ -93,11 +94,11 @@ async def validation_exception_handler(request, err: HTTPException):
 
 async def validate_token(token: str = Depends(oauth2_scheme)):
     unauthorized = APIException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
         content={
             'message': 'Invalid credentials',
-            'type': 'auth',
-            'headers': {'WWW-Authenticate': 'Bearer'}},
-        status_code=401
+            'type': 'auth'
+        }
     )
     try:
         payload = jwt.decode(token, const.JWT.SECRET, 'HS256')
@@ -143,6 +144,7 @@ async def validate_drive_token(user_id: int = Depends(validate_token)):
             },
         )
 
+    # if the NeurAI file doesn't exists create one
     if not items:
         folder_metadata = {
             'name': const.APP_NAME,
@@ -179,6 +181,7 @@ async def registration(user: s.UserCredential):
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 content={'message': 'User with this name already exists'}
         )
+
     return Response(status_code=status.HTTP_201_CREATED)
 
 
@@ -249,21 +252,60 @@ async def drive_authorize_code(code: str, user_id=Depends(validate_token)):
         refresh_token=creds.refresh_token
     )
 
-    return {'creds': creds.to_json()}
+    return {'message': 'Google authorization successful'}
 
 
-@api.get('/google/get/files', dependencies=[Depends(validate_token)])
+@api.get('/google/files', dependencies=[Depends(validate_token)])
 async def drive_get_files(creds=Depends(validate_drive_token)):
 
     service = build('drive', 'v3', credentials=creds)
 
+    # get folder_id for NeurAI folder
     results = service.files().list(
         q=const.GoogleAPI.CONTENT_FILTER,
         fields="nextPageToken, files(id, name)"
     ).execute()
     items = results.get('files', [])
 
-    return {'folder': items}
+    # if NeurAI folder doesn't exist we need to retry authorization
+    if not items:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={'message': 'Folder NeurAI not found'},
+        )
+
+    folder_id = items[0]['id']
+    q = f"'{folder_id}' in parents"
+
+    # upload sample file to check if it returns list of files
+    file_metadata = {
+        'name': 'sampleUpload.txt',
+        'parents': [folder_id]
+    }
+    media = MediaFileUpload(
+        'sampleUpload.txt',
+        mimetype='text/plain'
+    )
+    service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields='id'
+    ).execute()
+
+    # list the folder content
+    files = []
+    page_token = None
+    while True:
+        response = service.files().list(
+            q=q,
+            fields='nextPageToken, files(id, name)',
+            pageToken=page_token
+        ).execute()
+        files.extend(response.get('files', []))
+        page_token = response.get('nextPageToken', None)
+        if page_token is None:
+            break
+    return {'files': files}
 
 
 @api.get('/profile')
