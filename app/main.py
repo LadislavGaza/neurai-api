@@ -267,7 +267,7 @@ async def drive_get_files(creds=Depends(validate_drive_token)):
 
 
 @api.get('/profile')
-async def profile(user_id=Depends(validate_token)):
+async def profile(user_id: int = Depends(validate_token)):
     user = await crud.get_user_by_id(user_id=user_id)
     authorized_drive = True if user.refresh_token else False
     return {
