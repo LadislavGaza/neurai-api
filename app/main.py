@@ -25,6 +25,7 @@ import app.schema as s
 from app import crud
 from app import const
 
+import os
 
 class APIException(Exception):
     status_code = None
@@ -275,7 +276,7 @@ async def drive_get_files(creds=Depends(validate_drive_token)):
         )
 
     folder_id = items[0]['id']
-    q = f"'{folder_id}' in parents"
+    q = f"'{folder_id}' in parents and trashed=false"
 
     # upload sample file to check if it returns list of files
     file_metadata = {
@@ -326,3 +327,59 @@ async def test():
 @api.get('/user')
 async def user_resource(user_id: int = Depends(validate_token)):
     return {'user': user_id}
+
+
+@api.post('/patient/{patientID}/files')
+async def upload(user_id: int =Depends(validate_token), creds=Depends(validate_drive_token)):
+    # images: List[UploadFile] = File(...)
+    service = build('drive', 'v3', credentials=creds)
+
+    # get folder_id for NeurAI folder
+    results = service.files().list(
+        q=const.GoogleAPI.CONTENT_FILTER,
+        fields="nextPageToken, files(id, name)"
+    ).execute()
+    items = results.get('files', [])
+
+    # if NeurAI folder doesn't exist we need to retry authorization
+    if not items:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={'message': 'Folder NeurAI not found'},
+        )
+
+    folder_id = items[0]['id']
+    q = f"'{folder_id}' in parents and trashed=false"
+
+    files = os.listdir('files/') #delete import os
+    for file in files:
+    # upload sample file to check if it returns list of files
+        file_metadata = {
+            'name': file,
+            'parents': [folder_id]
+        }
+        media = MediaFileUpload(
+            f"files/{file}",
+            mimetype='application/dicom',
+            resumable=True
+        )
+        service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id'
+        ).execute()
+
+    # list the folder content
+    files = []
+    page_token = None
+    while True:
+        response = service.files().list(
+            q=q,
+            fields='nextPageToken, files(id, name)',
+            pageToken=page_token
+        ).execute()
+        files.extend(response.get('files', []))
+        page_token = response.get('nextPageToken', None)
+        if page_token is None:
+            break
+    return {'files': files}
