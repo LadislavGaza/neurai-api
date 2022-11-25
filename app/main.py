@@ -22,6 +22,8 @@ from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
 from typing import List
+from pydicom.errors import InvalidDicomError
+from pydicom.filereader import dcmread
 
 import app.schema as s
 from app import crud
@@ -339,6 +341,14 @@ async def upload(user_id: int =Depends(validate_token), creds=Depends(validate_d
     new_files = []
     try:
         for file in files:
+            dicom_meta = dcmread(file.file)
+            patient_name = dicom_meta.PatientName
+
+            print(patient_name)
+            # TODO: create record in MRI table
+            # Nahrany subor je asociovany s pouzivatelom, 
+            # ktory ho nahraval a je k nemu ukladane aj meno pacienta ziskane z DICOM
+
             file_metadata = {
                 'name': file.filename,
                 'parents': [folder_id]
@@ -359,6 +369,13 @@ async def upload(user_id: int =Depends(validate_token), creds=Depends(validate_d
                 'mimeType': uploaded_file.get('mimeType'),
                 'createdTime': uploaded_file.get('createdTime')
             })
+    except InvalidDicomError as e:
+        raise APIException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                'message': 'File(s) must be dicom format'
+            },
+        )
     except Exception as e:
         status_code = e.response.status_code if e.response.status_code else status.HTTP_500_INTERNAL_SERVER_ERROR
         raise APIException(
