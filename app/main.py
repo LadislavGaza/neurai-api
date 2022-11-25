@@ -260,7 +260,6 @@ async def drive_authorize_code(code: str, user_id=Depends(validate_token)):
 
 @api.get('/google/files', dependencies=[Depends(validate_token)])
 async def drive_get_files(creds=Depends(validate_drive_token)):
-
     service = build('drive', 'v3', credentials=creds)
 
     # get folder_id for NeurAI folder
@@ -279,21 +278,6 @@ async def drive_get_files(creds=Depends(validate_drive_token)):
 
     folder_id = items[0]['id']
     q = f"'{folder_id}' in parents and trashed=false"
-
-    # upload sample file to check if it returns list of files
-    file_metadata = {
-        'name': 'sampleUpload.txt',
-        'parents': [folder_id]
-    }
-    media = MediaFileUpload(
-        'sampleUpload.txt',
-        mimetype='text/plain'
-    )
-    service.files().create(
-        body=file_metadata,
-        media_body=media,
-        fields='id'
-    ).execute()
 
     # list the folder content
     files = []
