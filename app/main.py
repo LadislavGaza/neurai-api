@@ -5,7 +5,9 @@ from fastapi import (
     status,
     Response,
     Depends,
-    HTTPException
+    HTTPException,
+    UploadFile,
+    File
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
@@ -15,7 +17,7 @@ import google_auth_oauthlib.flow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaIoBaseUpload
 from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
@@ -330,8 +332,7 @@ async def user_resource(user_id: int = Depends(validate_token)):
 
 
 @api.post('/patient/{patientID}/files')
-async def upload(user_id: int =Depends(validate_token), creds=Depends(validate_drive_token)):
-    # images: List[UploadFile] = File(...)
+async def upload(user_id: int =Depends(validate_token), creds=Depends(validate_drive_token), files: List[UploadFile] = File(...)):
     service = build('drive', 'v3', credentials=creds)
 
     # get folder_id for NeurAI folder
@@ -351,35 +352,36 @@ async def upload(user_id: int =Depends(validate_token), creds=Depends(validate_d
     folder_id = items[0]['id']
     q = f"'{folder_id}' in parents and trashed=false"
 
-    files = os.listdir('files/') #delete import os
-    for file in files:
-    # upload sample file to check if it returns list of files
-        file_metadata = {
-            'name': file,
-            'parents': [folder_id]
-        }
-        media = MediaFileUpload(
-            f"files/{file}",
-            mimetype='application/dicom',
-            resumable=True
+    new_files = []
+    try:
+        for file in files:
+            file_metadata = {
+                'name': file.filename,
+                'parents': [folder_id]
+            }
+            media = MediaIoBaseUpload(
+                file.file,
+                mimetype='application/dicom',
+                resumable=True
+            )
+            uploaded_file = service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id,name,mimeType,createdTime'
+            ).execute()
+            new_files.append({
+                'id': uploaded_file.get('id'),
+                'name': uploaded_file.get('name'),
+                'mimeType': uploaded_file.get('mimeType'),
+                'createdTime': uploaded_file.get('createdTime')
+            })
+    except Exception as e:
+        status_code = e.response.status_code if e.response.status_code else status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise APIException(
+            status_code=status_code,
+            content={
+                'message': 'Google Drive upload failed'
+            },
         )
-        service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id'
-        ).execute()
 
-    # list the folder content
-    files = []
-    page_token = None
-    while True:
-        response = service.files().list(
-            q=q,
-            fields='nextPageToken, files(id, name)',
-            pageToken=page_token
-        ).execute()
-        files.extend(response.get('files', []))
-        page_token = response.get('nextPageToken', None)
-        if page_token is None:
-            break
-    return {'files': files}
+    return {'files': new_files}
