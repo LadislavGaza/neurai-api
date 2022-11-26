@@ -70,9 +70,7 @@ async def create_patient(id: str, forename: str, surname: str, user_id: int):
         forename=forename,
         surname=surname,
         created_by=user_id,
-        created_at=datetime.now().replace(microsecond=0),
-        modified_by=user_id,
-        modified_at=datetime.now().replace(microsecond=0)
+        modified_by=user_id
     )
     async with AsyncSession(m.engine) as session:
         session.add(patient_model)
