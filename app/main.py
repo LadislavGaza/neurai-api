@@ -29,7 +29,6 @@ import app.schema as s
 from app import crud
 from app import const
 
-import os
 
 class APIException(Exception):
     status_code = None
@@ -318,7 +317,11 @@ async def user_resource(user_id: int = Depends(validate_token)):
 
 
 @api.post('/patient/{patientID}/files')
-async def upload(user_id: int =Depends(validate_token), creds=Depends(validate_drive_token), files: List[UploadFile] = File(...)):
+async def upload(
+        patientID: str,
+        user_id: int = Depends(validate_token),
+        creds=Depends(validate_drive_token),
+        files: List[UploadFile] = File(...)):
     service = build('drive', 'v3', credentials=creds)
 
     # get folder_id for NeurAI folder
@@ -345,9 +348,8 @@ async def upload(user_id: int =Depends(validate_token), creds=Depends(validate_d
             patient_name = dicom_meta.PatientName
 
             print(patient_name)
-            # TODO: create record in MRI table
-            # Nahrany subor je asociovany s pouzivatelom, 
-            # ktory ho nahraval a je k nemu ukladane aj meno pacienta ziskane z DICOM
+
+            await crud.create_mri_file(filename=file.filename, patient_id=patientID, user_id=user_id)
 
             file_metadata = {
                 'name': file.filename,
@@ -355,7 +357,7 @@ async def upload(user_id: int =Depends(validate_token), creds=Depends(validate_d
             }
             media = MediaIoBaseUpload(
                 file.file,
-                mimetype='application/dicom',
+                mimetype='application/dicom',  # application/octet-stream
                 resumable=True
             )
             uploaded_file = service.files().create(

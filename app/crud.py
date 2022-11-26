@@ -1,6 +1,7 @@
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Iterable
+from datetime import datetime
 
 import app.model as m
 import app.schema as s
@@ -49,3 +50,32 @@ async def get_user_by_id(user_id: int) -> m.User:
         result = await session.execute(query)
 
     return result.scalars().first()
+
+
+async def create_mri_file(filename: str, patient_id: str, user_id: int):
+    mri_file_model = m.MRIFile(
+        filename=filename,
+        patient_id=patient_id,
+        created_by=user_id,
+        created_at=datetime.now().replace(microsecond=0),
+        modified_by=user_id,
+        modified_at=datetime.now().replace(microsecond=0)
+    )
+    async with AsyncSession(m.engine) as session:
+        session.add(mri_file_model)
+        await session.commit()
+
+
+async def create_patient(id: str, forename: str, surname: str, user_id: int):
+    patient_model = m.Patient(
+        id=id,
+        forename=forename,
+        surname=surname,
+        created_by=user_id,
+        created_at=datetime.now().replace(microsecond=0),
+        modified_by=user_id,
+        modified_at=datetime.now().replace(microsecond=0)
+    )
+    async with AsyncSession(m.engine) as session:
+        session.add(patient_model)
+        await session.commit()

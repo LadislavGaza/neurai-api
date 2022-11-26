@@ -72,7 +72,7 @@ def data_upgrades():
     patients = [
         {
             'id': ''.join(
-                choices(string.ascii_uppercase + string.digits, k=8)
+                choices(string.ascii_uppercase + string.digits, k=10)
             ),
             'forename': choice([
                 'Jozef', 'Milan', 'Štefan',
