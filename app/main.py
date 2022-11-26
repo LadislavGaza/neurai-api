@@ -347,9 +347,11 @@ async def upload(
             dicom_meta = dcmread(file.file)
             patient_name = dicom_meta.PatientName
 
-            print(patient_name)
-
-            await crud.create_mri_file(filename=file.filename, patient_id=patientID, user_id=user_id)
+            await crud.create_mri_file(
+                filename=file.filename,
+                patient_id=patientID,
+                user_id=user_id
+            )
 
             file_metadata = {
                 'name': file.filename,
@@ -371,6 +373,7 @@ async def upload(
                 'mimeType': uploaded_file.get('mimeType'),
                 'createdTime': uploaded_file.get('createdTime')
             })
+
     except InvalidDicomError as e:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -379,7 +382,12 @@ async def upload(
             },
         )
     except Exception as e:
-        status_code = e.response.status_code if e.response.status_code else status.HTTP_500_INTERNAL_SERVER_ERROR
+        status_code = (
+            e.response.status_code
+            if e.response.status_code
+            else status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
         raise APIException(
             status_code=status_code,
             content={
