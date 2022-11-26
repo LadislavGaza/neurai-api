@@ -339,7 +339,6 @@ async def upload(
         )
 
     folder_id = items[0]['id']
-    q = f"'{folder_id}' in parents and trashed=false"
 
     new_files = []
     try:
