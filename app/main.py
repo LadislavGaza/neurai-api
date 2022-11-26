@@ -18,12 +18,16 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
+from io import BytesIO
+
 from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
 from typing import List
 from pydicom.errors import InvalidDicomError
 from pydicom.filereader import dcmread
+from buffered_encryption.aesctr import EncryptionIterator, ReadOnlyEncryptedFile
+
 
 import app.schema as s
 from app import crud
@@ -293,6 +297,17 @@ async def drive_get_files(creds=Depends(validate_drive_token)):
         page_token = response.get('nextPageToken', None)
         if page_token is None:
             break
+
+    # read and decrypt file, code for later
+
+    # for file in files:
+    #     file_media = service.files().get_media(fileId=file['id']).execute()
+    #     with BytesIO(file_media) as file_media_bytes:
+    #         file_media_bytes.seek(0)
+    #         ef = ReadOnlyEncryptedFile(file_media_bytes,const.ENC.KEY,const.ENC.SIG)
+    #         with open(file['name'],"wb") as f:
+    #             f.write(ef.read())  # close file ?? 
+
     return {'files': files}
 
 
@@ -343,23 +358,35 @@ async def upload(
 
     new_files = []
     try:
-        for file in files:
-            dicom_meta = dcmread(file.file)
+        for upload_file in files:
+            dicom_meta = dcmread(upload_file.file)
             patient_name = dicom_meta.PatientName
 
             await crud.create_mri_file(
-                filename=file.filename,
+                filename=upload_file.filename,
                 patient_id=patientID,
                 user_id=user_id
             )
 
+            await upload_file.seek(0)  # this 100% needs to be here
+
+            enc_file = EncryptionIterator(
+                upload_file.file,
+                const.ENC.KEY,
+                const.ENC.SIG
+                )
+
+            cipher_file = BytesIO()
+            for chunk in enc_file:
+                cipher_file.write(chunk)
+
             file_metadata = {
-                'name': file.filename,
+                'name': upload_file.filename,
                 'parents': [folder_id]
             }
             media = MediaIoBaseUpload(
-                file.file,
-                mimetype='application/dicom',  # application/octet-stream
+                cipher_file,
+                mimetype='application/octet-stream', 
                 resumable=True
             )
             uploaded_file = service.files().create(
