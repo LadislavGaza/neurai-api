@@ -57,9 +57,7 @@ async def create_mri_file(filename: str, patient_id: str, user_id: int):
         filename=filename,
         patient_id=patient_id,
         created_by=user_id,
-        created_at=datetime.now().replace(microsecond=0),
-        modified_by=user_id,
-        modified_at=datetime.now().replace(microsecond=0)
+        modified_by=user_id
     )
     async with AsyncSession(m.engine) as session:
         session.add(mri_file_model)

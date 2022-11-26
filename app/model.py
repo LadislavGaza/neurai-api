@@ -8,7 +8,7 @@ from sqlalchemy import (
     BigInteger
 )
 from sqlalchemy.orm import relationship, declarative_base
-from sqlalchemy.sql.functions import now
+from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine
 
 
@@ -32,9 +32,9 @@ class Patient(Base):
     forename = Column(String, nullable=False)
     surname = Column(String, nullable=False)
 
-    created_at = Column(DateTime, nullable=False, default=now)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    modified_at = Column(DateTime, default=now, onupdate=now)
+    modified_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     modified_by = Column(Integer, ForeignKey("users.id"))
 
     mri_files = relationship('MRIFile', back_populates='patient')
@@ -48,9 +48,9 @@ class MRIFile(Base):
     id = Column(BigInteger, primary_key=True, index=True)
     filename = Column(String, nullable=False)
     patient_id = Column(String(20), ForeignKey("patients.id"), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=now)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    modified_at = Column(DateTime, default=now, onupdate=now)
+    modified_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     modified_by = Column(Integer, ForeignKey("users.id"))
 
     patient = relationship(Patient, foreign_keys=[patient_id], back_populates='mri_files')
