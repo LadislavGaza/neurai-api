@@ -33,5 +33,5 @@ class CORS:
 
 
 class ENC:
-    KEY = base64.b64decode(bytes(os.environ.get('ENC_KEY'), "utf-8"))
-    SIG = base64.b64decode(bytes(os.environ.get('ENC_SIG'), "utf-8"))
+    KEY = base64.b64decode(bytes(os.environ.get('ENC_KEY'), 'utf-8'))
+    SIG = base64.b64decode(bytes(os.environ.get('ENC_SIG'), 'utf-8'))

@@ -264,7 +264,9 @@ async def drive_authorize_code(code: str, user_id=Depends(validate_token)):
 
 
 @api.get('/google/files')
-async def drive_get_files(creds=Depends(validate_drive_token), user_id: int = Depends(validate_token)):
+async def drive_get_files(
+        creds=Depends(validate_drive_token),
+        user_id: int = Depends(validate_token)):
     service = build('drive', 'v3', credentials=creds)
 
     # get folder_id for NeurAI folder
