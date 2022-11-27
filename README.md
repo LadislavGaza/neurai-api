@@ -44,3 +44,18 @@ to newest version you have to downgrade in order to force data seeding
 (docker)$ alembic -c config/alembic.ini downgrade -1
 (docker)$ alembic -c config/alembic.ini -x data=true upgrade head
 ```
+
+Encryption key and sigma is generated and set as environment variable 
+```
+import os  
+import base64
+
+b_key =os.urandom(32)
+key = base64.b64encode(b_key)
+
+b_sig =os.urandom(16)
+sig = base64.b64encode(b_sig)
+
+print('key: ', key.decode())
+print('sig: ', sig.decode())
+```
