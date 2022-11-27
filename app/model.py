@@ -23,6 +23,7 @@ class User(Base):
     email = Column(String, nullable=False, unique=True)
     password = Column(String, nullable=False)
     refresh_token = Column(String(512))
+    mri_files = relationship('MRIFile', foreign_keys='[MRIFile.created_by]', back_populates='creator')
 
 
 class Patient(Base):
@@ -54,5 +55,5 @@ class MRIFile(Base):
     modified_by = Column(Integer, ForeignKey("users.id"))
 
     patient = relationship(Patient, foreign_keys=[patient_id], back_populates='mri_files')
-    creator = relationship(User, foreign_keys=[created_by])
+    creator = relationship(User, foreign_keys=[created_by], back_populates='mri_files')
     editor = relationship(User, foreign_keys=[modified_by])

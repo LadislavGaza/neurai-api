@@ -1,7 +1,7 @@
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import subqueryload
 from typing import Iterable
-from datetime import datetime
 
 import app.model as m
 import app.schema as s
@@ -46,7 +46,7 @@ async def update_user_refresh_token(user_id: int, refresh_token: str):
 
 async def get_user_by_id(user_id: int) -> m.User:
     async with AsyncSession(m.engine) as session:
-        query = select(m.User).where(m.User.id == user_id)
+        query = select(m.User).where(m.User.id == user_id).options(subqueryload(m.User.mri_files))
         result = await session.execute(query)
 
     return result.scalars().first()

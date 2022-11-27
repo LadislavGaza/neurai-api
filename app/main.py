@@ -259,8 +259,8 @@ async def drive_authorize_code(code: str, user_id=Depends(validate_token)):
     return {'message': 'Google authorization successful'}
 
 
-@api.get('/google/files', dependencies=[Depends(validate_token)])
-async def drive_get_files(creds=Depends(validate_drive_token)):
+@api.get('/google/files')
+async def drive_get_files(creds=Depends(validate_drive_token), user_id: int = Depends(validate_token)):
     service = build('drive', 'v3', credentials=creds)
 
     # get folder_id for NeurAI folder
@@ -293,7 +293,17 @@ async def drive_get_files(creds=Depends(validate_drive_token)):
         page_token = response.get('nextPageToken', None)
         if page_token is None:
             break
-    return {'files': files}
+
+    # check the files uploaded by logged in user
+    users_files = []
+    user = await crud.get_user_by_id(user_id)
+    if user.mri_files:
+        mri_filenames = [record.filename for record in user.mri_files]
+        for file in files:
+            if file['name'] in mri_filenames:
+                users_files.append(file)
+
+    return {'files': users_files}
 
 
 @api.get('/profile')
