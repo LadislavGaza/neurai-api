@@ -24,10 +24,12 @@ from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
 from typing import List
-from pydicom.errors import InvalidDicomError
-from pydicom.filereader import dcmread
 from buffered_encryption.aesctr import EncryptionIterator, ReadOnlyEncryptedFile
 
+from pydicom.errors import InvalidDicomError
+from pydicom.filereader import dcmread
+from nibabel import FileHolder, Nifti1Image
+from nibabel.spatialimages import HeaderDataError
 
 import app.schema as s
 from app import crud
@@ -370,8 +372,19 @@ async def upload(
     new_files = []
     try:
         for upload_file in files:
-            dicom_meta = dcmread(upload_file.file)
-            patient_name = dicom_meta.PatientName
+
+            try:
+                is_nifti = False
+                dicom_meta = dcmread(upload_file.file)
+                patient_name = dicom_meta.PatientName
+            except InvalidDicomError as e:
+                is_nifti = True
+
+            # read nifti file
+            if is_nifti:
+                fh = FileHolder(fileobj=upload_file.file)
+                Nifti1Image.from_file_map({'header': fh, 'image': fh})
+                patient_name = None  # nifti doesn't include patient name
 
             await crud.create_mri_file(
                 filename=upload_file.filename,
@@ -412,11 +425,11 @@ async def upload(
                 'createdTime': uploaded_file.get('createdTime')
             })
 
-    except InvalidDicomError as e:
+    except HeaderDataError:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
-                'message': 'File(s) must be dicom format'
+                'message': 'File(s) must be valid dicom or nifti format'
             },
         )
     except Exception as e:
