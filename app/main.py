@@ -263,8 +263,8 @@ async def drive_authorize_code(code: str, user_id=Depends(validate_token)):
     return {'message': 'Google authorization successful'}
 
 
-@api.get('/google/files', dependencies=[Depends(validate_token)])
-async def drive_get_files(creds=Depends(validate_drive_token)):
+@api.get('/google/files')
+async def drive_get_files(creds=Depends(validate_drive_token), user_id: int = Depends(validate_token)):
     service = build('drive', 'v3', credentials=creds)
 
     # get folder_id for NeurAI folder
@@ -306,7 +306,7 @@ async def drive_get_files(creds=Depends(validate_drive_token)):
     #         file_media_bytes.seek(0)
     #         ef = ReadOnlyEncryptedFile(file_media_bytes,const.ENC.KEY,const.ENC.SIG)
     #         with open(file['name'],"wb") as f:
-    #             f.write(ef.read())  # close file ??
+    #             f.write(ef.read())
 
     # check the files uploaded by logged in user
     users_files = []
