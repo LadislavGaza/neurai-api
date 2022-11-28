@@ -17,23 +17,22 @@ import google_auth_oauthlib.flow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
-from io import BytesIO
+from googleapiclient.errors import HttpError
 
 from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
 from typing import List
-from buffered_encryption.aesctr import EncryptionIterator, ReadOnlyEncryptedFile
+from buffered_encryption.aesctr import ReadOnlyEncryptedFile
 
-from pydicom.errors import InvalidDicomError
-from pydicom.filereader import dcmread
-from nibabel import FileHolder, Nifti1Image
 from nibabel.spatialimages import HeaderDataError
 
 import app.schema as s
-from app import crud
-from app import const
+from app import (
+    crud,
+    utils,
+    const
+)
 
 
 class APIException(Exception):
@@ -373,57 +372,15 @@ async def upload(
     try:
         for upload_file in files:
 
-            try:
-                is_nifti = False
-                dicom_meta = dcmread(upload_file.file)
-                patient_name = dicom_meta.PatientName
-            except InvalidDicomError as e:
-                is_nifti = True
-
-            # read nifti file
-            if is_nifti:
-                fh = FileHolder(fileobj=upload_file.file)
-                Nifti1Image.from_file_map({'header': fh, 'image': fh})
-                patient_name = None  # nifti doesn't include patient name
-
-            await crud.create_mri_file(
-                filename=upload_file.filename,
-                patient_id=patientID,
-                user_id=user_id
-            )
-
-            await upload_file.seek(0)  # this 100% needs to be here
-
-            enc_file = EncryptionIterator(
-                upload_file.file,
-                const.ENC.KEY,
-                const.ENC.SIG
+            new_files.append(
+                await utils.upload_file(
+                    service=service,
+                    folder_id=folder_id,
+                    file_to_upload=upload_file,
+                    patient_id=patientID,
+                    user_id=user_id
                 )
-
-            cipher_file = BytesIO()
-            for chunk in enc_file:
-                cipher_file.write(chunk)
-
-            file_metadata = {
-                'name': upload_file.filename,
-                'parents': [folder_id]
-            }
-            media = MediaIoBaseUpload(
-                cipher_file,
-                mimetype='application/octet-stream',
-                resumable=True
             )
-            uploaded_file = service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id,name,mimeType,createdTime'
-            ).execute()
-            new_files.append({
-                'id': uploaded_file.get('id'),
-                'name': uploaded_file.get('name'),
-                'mimeType': uploaded_file.get('mimeType'),
-                'createdTime': uploaded_file.get('createdTime')
-            })
 
     except HeaderDataError:
         raise APIException(
@@ -432,10 +389,10 @@ async def upload(
                 'message': 'File(s) must be valid dicom or nifti format'
             },
         )
-    except Exception as e:
+    except HttpError as e:
         status_code = (
-            e.response.status_code
-            if e.response.status_code
+            e.status_code
+            if e.status_code
             else status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
