@@ -17,21 +17,22 @@ import google_auth_oauthlib.flow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
-from io import BytesIO
+from googleapiclient.errors import HttpError
 
 from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
 from typing import List
-from pydicom.errors import InvalidDicomError
-from pydicom.filereader import dcmread
-from buffered_encryption.aesctr import EncryptionIterator, ReadOnlyEncryptedFile
+from buffered_encryption.aesctr import ReadOnlyEncryptedFile
 
+from nibabel.spatialimages import HeaderDataError
 
 import app.schema as s
-from app import crud
-from app import const
+from app import (
+    crud,
+    utils,
+    const
+)
 
 
 class APIException(Exception):
@@ -301,14 +302,11 @@ async def drive_get_files(
             break
 
     # read and decrypt file, code for later
-
     # for file in files:
-    #     file_media = service.files().get_media(fileId=file['id']).execute()
-    #     with BytesIO(file_media) as file_media_bytes:
-    #         file_media_bytes.seek(0)
-    #         ef = ReadOnlyEncryptedFile(file_media_bytes,const.ENC.KEY,const.ENC.SIG)
-    #         with open(file['name'],"wb") as f:
-    #             f.write(ef.read())
+    #     f_e = utils.MRIFile(filename=file['name'], content='')
+    #     f_e.download_decrypted(service, file['id'])
+    #     with open(file['name'], "wb") as f:
+    #         f.write(f_e.content)
 
     # check the files uploaded by logged in user
     users_files = []
@@ -370,59 +368,40 @@ async def upload(
     new_files = []
     try:
         for upload_file in files:
-            dicom_meta = dcmread(upload_file.file)
-            patient_name = dicom_meta.PatientName
+
+            file = utils.MRIFile(
+                filename=upload_file.filename,
+                content=upload_file.file,
+            )
+
+            file.check_file_type()
 
             await crud.create_mri_file(
-                filename=upload_file.filename,
+                filename=file.filename,
                 patient_id=patientID,
                 user_id=user_id
             )
 
             await upload_file.seek(0)  # this 100% needs to be here
 
-            enc_file = EncryptionIterator(
-                upload_file.file,
-                const.ENC.KEY,
-                const.ENC.SIG
+            new_files.append(
+                file.upload_encrypted(
+                    service=service,
+                    folder_id=folder_id
                 )
-
-            cipher_file = BytesIO()
-            for chunk in enc_file:
-                cipher_file.write(chunk)
-
-            file_metadata = {
-                'name': upload_file.filename,
-                'parents': [folder_id]
-            }
-            media = MediaIoBaseUpload(
-                cipher_file,
-                mimetype='application/octet-stream',
-                resumable=True
             )
-            uploaded_file = service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id,name,mimeType,createdTime'
-            ).execute()
-            new_files.append({
-                'id': uploaded_file.get('id'),
-                'name': uploaded_file.get('name'),
-                'mimeType': uploaded_file.get('mimeType'),
-                'createdTime': uploaded_file.get('createdTime')
-            })
 
-    except InvalidDicomError as e:
+    except HeaderDataError:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
-                'message': 'File(s) must be dicom format'
+                'message': 'File(s) must be valid dicom or nifti format'
             },
         )
-    except Exception as e:
+    except HttpError as e:
         status_code = (
-            e.response.status_code
-            if e.response.status_code
+            e.status_code
+            if e.status_code
             else status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
