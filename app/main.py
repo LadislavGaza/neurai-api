@@ -64,13 +64,6 @@ api.add_middleware(
 )
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 
-flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-    const.GoogleAPI.CREDS_FILE,
-    const.GoogleAPI.SCOPES,
-    redirect_uri=const.GoogleAPI.REDIRECT_URL
-)
-
-
 @api.exception_handler(APIException)
 async def api_exception_handler(request: Request(), exc: APIException):
     return JSONResponse(
@@ -233,6 +226,12 @@ async def patients_overview():
 
 @api.get('/google/authorize', dependencies=[Depends(validate_token)])
 async def drive_authorize():
+    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+        const.GoogleAPI.CREDS_FILE,
+        const.GoogleAPI.SCOPES,
+        redirect_uri=const.GoogleAPI.REDIRECT_URL
+    )
+
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true'
@@ -241,7 +240,14 @@ async def drive_authorize():
 
 
 @api.get('/google/authorize/code')
-async def drive_authorize_code(code: str, user_id=Depends(validate_token)):
+async def drive_authorize_code(code: str, state: str, user_id=Depends(validate_token)):
+    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+        const.GoogleAPI.CREDS_FILE,
+        const.GoogleAPI.SCOPES,
+        redirect_uri=const.GoogleAPI.REDIRECT_URL,
+        state=state
+    )
+
     try:
         flow.fetch_token(code=code)
         creds = flow.credentials
