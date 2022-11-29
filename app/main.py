@@ -318,9 +318,9 @@ async def drive_get_files(
     users_files = []
     user = await crud.get_user_by_id(user_id)
     if user.mri_files:
-        mri_filenames = [record.filename for record in user.mri_files]
+        mri_file_ids = [record.file_id for record in user.mri_files]
         for file in files:
-            if file['name'] in mri_filenames:
+            if file['id'] in mri_file_ids:
                 users_files.append(file)
 
     return {'files': users_files}
@@ -382,21 +382,21 @@ async def upload(
 
             file.check_file_type()
 
+            await upload_file.seek(0)  # this 100% needs to be here
+
+            new_file = file.upload_encrypted(
+                service=service,
+                folder_id=folder_id
+            )
+
+            new_files.append(new_file)
+
             await crud.create_mri_file(
                 filename=file.filename,
+                file_id=new_file['id'],
                 patient_id=patientID,
                 user_id=user_id
             )
-
-            await upload_file.seek(0)  # this 100% needs to be here
-
-            new_files.append(
-                file.upload_encrypted(
-                    service=service,
-                    folder_id=folder_id
-                )
-            )
-
     except HeaderDataError:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,

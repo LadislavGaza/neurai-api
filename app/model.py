@@ -48,6 +48,7 @@ class MRIFile(Base):
 
     id = Column(BigInteger, primary_key=True, index=True)
     filename = Column(String, nullable=False)
+    file_id = Column(String, nullable=False)
     patient_id = Column(String(20), ForeignKey("patients.id"), nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)

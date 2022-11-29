@@ -56,9 +56,10 @@ async def get_user_by_id(user_id: int) -> m.User:
     return result.scalars().first()
 
 
-async def create_mri_file(filename: str, patient_id: str, user_id: int):
+async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id: int):
     mri_file_model = m.MRIFile(
         filename=filename,
+        file_id=file_id,
         patient_id=patient_id,
         created_by=user_id,
         modified_by=user_id
