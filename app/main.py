@@ -302,14 +302,11 @@ async def drive_get_files(
             break
 
     # read and decrypt file, code for later
-
     # for file in files:
-    #     file_media = service.files().get_media(fileId=file['id']).execute()
-    #     with BytesIO(file_media) as file_media_bytes:
-    #         file_media_bytes.seek(0)
-    #         ef = ReadOnlyEncryptedFile(file_media_bytes,const.ENC.KEY,const.ENC.SIG)
-    #         with open(file['name'],"wb") as f:
-    #             f.write(ef.read())
+    #     f_e = utils.MRIFile(filename=file['name'], content='')
+    #     f_e.download_decrypted(service, file['id'])
+    #     with open(file['name'], "wb") as f:
+    #         f.write(f_e.content)
 
     # check the files uploaded by logged in user
     users_files = []
@@ -372,13 +369,25 @@ async def upload(
     try:
         for upload_file in files:
 
+            file = utils.MRIFile(
+                filename=upload_file.filename,
+                content=upload_file.file,
+            )
+
+            file.check_file_type()
+
+            await crud.create_mri_file(
+                filename=file.filename,
+                patient_id=patientID,
+                user_id=user_id
+            )
+
+            await upload_file.seek(0)  # this 100% needs to be here
+
             new_files.append(
-                await utils.upload_file(
+                file.upload_encrypted(
                     service=service,
-                    folder_id=folder_id,
-                    file_to_upload=upload_file,
-                    patient_id=patientID,
-                    user_id=user_id
+                    folder_id=folder_id
                 )
             )
 
