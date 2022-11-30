@@ -49,7 +49,10 @@ async def get_user_by_id(user_id: int) -> m.User:
         query = (
             select(m.User)
             .where(m.User.id == user_id)
-            .options(subqueryload(m.User.mri_files))
+            .options(
+                subqueryload(m.User.mri_files)
+                .subqueryload(m.MRIFile.patient)
+            )
         )
         result = await session.execute(query)
 

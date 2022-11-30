@@ -318,10 +318,14 @@ async def drive_get_files(
     users_files = []
     user = await crud.get_user_by_id(user_id)
     if user.mri_files:
-        mri_filenames = [record.filename for record in user.mri_files]
-        for file in files:
-            if file['name'] in mri_filenames:
-                users_files.append(file)
+        drive_filenames = [record['name'] for record in files]
+        for file in user.mri_files:
+            if file.filename in drive_filenames:
+                users_files.append({
+                    'name': file.filename,
+                    'patient_name': f'{file.patient.forename} {file.patient.surname}',
+                    'modified_at': file.modified_at
+                })
 
     return {'files': users_files}
 
