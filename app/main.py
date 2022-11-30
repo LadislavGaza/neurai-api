@@ -387,21 +387,21 @@ async def upload(
 
             file.check_file_type()
 
+            await upload_file.seek(0)  # this 100% needs to be here
+
+            new_file = file.upload_encrypted(
+                service=service,
+                folder_id=folder_id
+            )
+
+            new_files.append(new_file)
+
             await crud.create_mri_file(
                 filename=file.filename,
+                file_id=new_file['id'],
                 patient_id=patientID,
                 user_id=user_id
             )
-
-            await upload_file.seek(0)  # this 100% needs to be here
-
-            new_files.append(
-                file.upload_encrypted(
-                    service=service,
-                    folder_id=folder_id
-                )
-            )
-
     except HeaderDataError:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
