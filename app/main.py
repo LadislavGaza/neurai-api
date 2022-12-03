@@ -24,6 +24,12 @@ from passlib.hash import argon2
 from datetime import datetime, timedelta
 from typing import List
 from buffered_encryption.aesctr import ReadOnlyEncryptedFile
+from gzip import compress
+import tempfile
+from pathlib import Path
+import dicom2nifti
+import os
+from io import BytesIO
 
 from nibabel.spatialimages import HeaderDataError
 
@@ -377,31 +383,72 @@ async def upload(
     folder_id = items[0]['id']
 
     new_files = []
+    dicom_files = []
+    nifti_file = None
     try:
-        for upload_file in files:
+        for input_file in files:
 
             file = utils.MRIFile(
-                filename=upload_file.filename,
-                content=upload_file.file,
+                filename=input_file.filename,
+                content=input_file.file
             )
 
             file.check_file_type()
 
-            await upload_file.seek(0)  # this 100% needs to be here
+            if file.is_nifti:
+                if len(files)>1:
+                    pass # viac ako 1 snimkovanie raise err
+                nifti_file = file
+            else:
+                if nifti_file:
+                    pass # raise err viac ako 1 snimkovanie
+                dicom_files.append(file)
 
-            new_file = file.upload_encrypted(
-                service=service,
-                folder_id=folder_id
+        if nifti_file:
+            upload_file = utils.MRIFile(
+                filename=nifti_file.filename,
+                content=compress(nifti_file.content)
             )
+            upload_file.is_nifti = True
+        else:
+            tmpdirname = tempfile.TemporaryDirectory()
+            temp_dir = Path(tmpdirname.name)
 
-            new_files.append(new_file)
+            for dicom_file in dicom_files:
+                dicom_file.content.seek(0)
+                file_name = temp_dir / dicom_file.filename
+                file_name.write_bytes(dicom_file.content.read())
 
-            await crud.create_mri_file(
-                filename=file.filename,
-                file_id=new_file['id'],
-                patient_id=patientID,
-                user_id=user_id
+            tmpfile = tempfile.NamedTemporaryFile(suffix='.nii.gz')
+            dicom2nifti.dicom_series_to_nifti(temp_dir, Path(tmpfile.name), reorient_nifti=True)
+            tmpfile.seek(0) # this 99% needs to be here
+
+            upload_file = utils.MRIFile(
+                filename='nigakabel.nii.gz',
+                content=BytesIO(tmpfile.read())
             )
+            upload_file.is_nifti = True
+
+        # await upload_file.seek(0)  # this 0% needs to be here
+        tmpdirname.cleanup()
+        tmpfile.close()
+
+
+        new_file = upload_file.upload_encrypted(
+            service=service,
+            folder_id=folder_id
+        )
+
+        new_files.append(new_file)
+
+        await crud.create_mri_file(
+            filename=upload_file.filename,
+            file_id=new_file['id'],
+            patient_id=patientID,
+            user_id=user_id
+        )
+
+
     except HeaderDataError:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
