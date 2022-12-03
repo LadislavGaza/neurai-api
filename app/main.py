@@ -24,8 +24,17 @@ from passlib.hash import argon2
 from datetime import datetime, timedelta
 from typing import List
 from buffered_encryption.aesctr import ReadOnlyEncryptedFile
+from gzip import compress
+import tempfile
+from pathlib import Path
+import dicom2nifti
+from io import BytesIO
+from string import ascii_lowercase
+from random import choice
 
 from nibabel.spatialimages import HeaderDataError
+from dicom2nifti.exceptions import ConversionValidationError
+from nibabel.wrapstruct import WrapStructError
 
 import app.schema as s
 from app import (
@@ -377,36 +386,96 @@ async def upload(
     folder_id = items[0]['id']
 
     new_files = []
+    dicom_files = []
+    nifti_file = None
     try:
-        for upload_file in files:
+        for input_file in files:
 
             file = utils.MRIFile(
-                filename=upload_file.filename,
-                content=upload_file.file,
+                filename=input_file.filename,
+                content=input_file.file
             )
 
             file.check_file_type()
 
-            await upload_file.seek(0)  # this 100% needs to be here
+            if file.is_nifti:
+                if len(files)>1:
+                    raise APIException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        content={
+                            'message': 'More than one scanning uploaded'
+                        },
+                    )
+                nifti_file = file
+            else:
+                if nifti_file:
+                    raise APIException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        content={
+                            'message': 'More than one scanning uploaded'
+                        },
+                    )
+                dicom_files.append(file)
 
-            new_file = file.upload_encrypted(
-                service=service,
-                folder_id=folder_id
+        if nifti_file:
+            upload_file = utils.MRIFile(
+                filename=nifti_file.filename,
+                content=compress(nifti_file.content)
             )
+            upload_file.is_nifti = True
+        else:
+            temp_directory = tempfile.TemporaryDirectory()
+            temp_dir_path = Path(temp_directory.name)
 
-            new_files.append(new_file)
+            for dicom_file in dicom_files:
+                dicom_file.content.seek(0)
+                file_name = temp_dir_path / dicom_file.filename
+                file_name.write_bytes(dicom_file.content.read())
 
-            await crud.create_mri_file(
-                filename=file.filename,
-                file_id=new_file['id'],
-                patient_id=patientID,
-                user_id=user_id
+            temp_file = tempfile.NamedTemporaryFile(suffix='.nii.gz')
+            dicom2nifti.dicom_series_to_nifti(temp_dir_path, Path(temp_file.name), reorient_nifti=True)
+            temp_file.seek(0) # this 99% needs to be here
+
+            result_str = ''.join(choice(ascii_lowercase) for i in range(12))
+
+            upload_file = utils.MRIFile(
+                filename= f'{result_str}.nii.gz',
+                content=BytesIO(temp_file.read())
             )
-    except HeaderDataError:
+            upload_file.is_nifti = True
+
+        temp_directory.cleanup()
+        temp_file.close()
+
+        new_file = upload_file.upload_encrypted(
+            service=service,
+            folder_id=folder_id
+        )
+
+        new_files.append(new_file)
+
+        await crud.create_mri_file(
+            filename=upload_file.filename,
+            file_id=new_file['id'],
+            patient_id=patientID,
+            user_id=user_id
+        )
+
+
+    except (HeaderDataError, WrapStructError):
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
                 'message': 'File(s) must be valid dicom or nifti format'
+            },
+        )
+    except APIException as excep:
+        raise excep
+    except ConversionValidationError:
+        raise APIException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                'message': 'Invalid dicom series'
             },
         )
     except HttpError as e:
