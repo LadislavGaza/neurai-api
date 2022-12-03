@@ -28,10 +28,13 @@ from gzip import compress
 import tempfile
 from pathlib import Path
 import dicom2nifti
-import os
 from io import BytesIO
+from string import ascii_lowercase
+from random import choice
 
 from nibabel.spatialimages import HeaderDataError
+from dicom2nifti.exceptions import ConversionValidationError
+from nibabel.wrapstruct import WrapStructError
 
 import app.schema as s
 from app import (
@@ -48,6 +51,9 @@ class APIException(Exception):
     def __init__(self, content, status_code: int):
         self.content = content
         self.status_code = status_code
+
+class UploadError(Exception):
+    pass
 
 
 api = FastAPI(
@@ -397,11 +403,11 @@ async def upload(
 
             if file.is_nifti:
                 if len(files)>1:
-                    pass # viac ako 1 snimkovanie raise err
+                    raise UploadError() # viac ako 1 snimkovanie raise err
                 nifti_file = file
             else:
                 if nifti_file:
-                    pass # raise err viac ako 1 snimkovanie
+                    raise UploadError() # raise err viac ako 1 snimkovanie
                 dicom_files.append(file)
 
         if nifti_file:
@@ -411,28 +417,28 @@ async def upload(
             )
             upload_file.is_nifti = True
         else:
-            tmpdirname = tempfile.TemporaryDirectory()
-            temp_dir = Path(tmpdirname.name)
+            temp_directory = tempfile.TemporaryDirectory()
+            temp_dir_path = Path(temp_directory.name)
 
             for dicom_file in dicom_files:
                 dicom_file.content.seek(0)
-                file_name = temp_dir / dicom_file.filename
+                file_name = temp_dir_path / dicom_file.filename
                 file_name.write_bytes(dicom_file.content.read())
 
-            tmpfile = tempfile.NamedTemporaryFile(suffix='.nii.gz')
-            dicom2nifti.dicom_series_to_nifti(temp_dir, Path(tmpfile.name), reorient_nifti=True)
-            tmpfile.seek(0) # this 99% needs to be here
+            temp_file = tempfile.NamedTemporaryFile(suffix='.nii.gz')
+            dicom2nifti.dicom_series_to_nifti(temp_dir_path, Path(temp_file.name), reorient_nifti=True)
+            temp_file.seek(0) # this 99% needs to be here
+
+            result_str = ''.join(choice(ascii_lowercase) for i in range(12))
 
             upload_file = utils.MRIFile(
-                filename='nigakabel.nii.gz',
-                content=BytesIO(tmpfile.read())
+                filename= f'{result_str}.nii.gz',
+                content=BytesIO(temp_file.read())
             )
             upload_file.is_nifti = True
 
-        # await upload_file.seek(0)  # this 0% needs to be here
-        tmpdirname.cleanup()
-        tmpfile.close()
-
+        temp_directory.cleanup()
+        temp_file.close()
 
         new_file = upload_file.upload_encrypted(
             service=service,
@@ -449,11 +455,25 @@ async def upload(
         )
 
 
-    except HeaderDataError:
+    except (HeaderDataError, WrapStructError):
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
                 'message': 'File(s) must be valid dicom or nifti format'
+            },
+        )
+    except UploadError:
+        raise APIException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                'message': 'More than one scanning uploaded'
+            },
+        )
+    except ConversionValidationError:
+        raise APIException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                'message': 'Invalid dicom series'
             },
         )
     except HttpError as e:
