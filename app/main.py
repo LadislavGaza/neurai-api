@@ -52,9 +52,6 @@ class APIException(Exception):
         self.content = content
         self.status_code = status_code
 
-class UploadError(Exception):
-    pass
-
 
 api = FastAPI(
     title=const.APP_NAME,
@@ -403,11 +400,21 @@ async def upload(
 
             if file.is_nifti:
                 if len(files)>1:
-                    raise UploadError() # viac ako 1 snimkovanie raise err
+                    raise APIException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        content={
+                            'message': 'More than one scanning uploaded'
+                        },
+                    )
                 nifti_file = file
             else:
                 if nifti_file:
-                    raise UploadError() # raise err viac ako 1 snimkovanie
+                    raise APIException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        content={
+                            'message': 'More than one scanning uploaded'
+                        },
+                    )
                 dicom_files.append(file)
 
         if nifti_file:
@@ -462,13 +469,8 @@ async def upload(
                 'message': 'File(s) must be valid dicom or nifti format'
             },
         )
-    except UploadError:
-        raise APIException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                'message': 'More than one scanning uploaded'
-            },
-        )
+    except APIException as excep:
+        raise excep
     except ConversionValidationError:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
