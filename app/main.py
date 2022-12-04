@@ -424,3 +424,22 @@ async def upload(
         )
 
     return {'files': new_files}
+
+
+@api.get('/patient/{patientID}/files')
+async def patient(patientID: str, user_id: int = Depends(validate_token)):
+    user = await crud.get_user_by_id(user_id)
+    mri_files = []
+    for file in user.mri_files:
+        if file.patient.id == patientID:
+            mri_files.append({
+                'file_id': file.file_id,
+                'filename': file.filename,
+                'created_at': file.created_at,
+                'modified_at': file.modified_at
+            })
+
+    return {
+        'mri_files': mri_files
+    }
+
