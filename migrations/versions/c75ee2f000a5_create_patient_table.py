@@ -12,7 +12,7 @@ from sqlalchemy import Table, MetaData
 from passlib.hash import argon2
 from datetime import datetime
 import string
-from random import choice, choices
+import random
 
 
 # revision identifiers, used by Alembic.
@@ -64,23 +64,24 @@ def data_upgrades():
 
     op.bulk_insert(users_tbl, [{
         'id': 1,
-        'email': 'tester@stuba.sk',
+        'email': 'tester@gmail.com',
         'password': argon2.hash('Abcdef123')
     }])
 
     N = 200
+    random.seed(1)
     patients = [
         {
             'id': ''.join(
-                choices(string.ascii_uppercase + string.digits, k=10)
+                random.choices(string.ascii_uppercase + string.digits, k=10)
             ),
-            'forename': choice([
+            'forename': random.choice([
                 'Jozef', 'Milan', 'Štefan',
                 'Zuzana', 'Monika', 'Anna'
             ]),
-            'surname': choice([
+            'surname': random.choice([
                 'Kováč', 'Molnár', 'Lukáč',
-                'Nováková', 'Poláková', 'Hudáková'
+                'Novák', 'Polák', 'Hudák'
             ]),
             'created_by': 1,
             'created_at': datetime.now().replace(microsecond=0)
