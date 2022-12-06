@@ -77,3 +77,34 @@ class MRIFile:
     #     file_media = service.files().get_media(fileId=file_id).execute()
     #     f_encrypted = MRIFile(filename=self.filename, content=file_media)
     #     self.content = f_encrypted.decrypt()
+
+
+def get_drive_folder_content(service, folder_id):
+    files = []
+    page_token = None
+    while True:
+        response = service.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields='nextPageToken, files(id, name)',
+            pageToken=page_token
+        ).execute()
+        files.extend(response.get('files', []))
+        page_token = response.get('nextPageToken', None)
+        if page_token is None:
+            break
+    return files
+
+
+def get_mri_files_per_user(user, files, patient_id):
+    mri_files = []
+    if user.mri_files:
+        drive_file_ids = [record['id'] for record in files]
+        for file in user.mri_files:
+            if file.file_id in drive_file_ids and file.patient.id == patient_id:
+                mri_files.append({
+                    'id': file.file_id,
+                    'name': file.filename,
+                    'created_at': file.created_at,
+                    'modified_at': file.modified_at
+                })
+    return mri_files
