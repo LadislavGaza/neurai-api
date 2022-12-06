@@ -416,11 +416,13 @@ async def upload(
                         },
                     )
                 dicom_files.append(file)
+        
+        result_str = ''.join(choice(ascii_lowercase) for i in range(12))
 
         if nifti_file:
             nifti_file.content.seek(0)
             upload_file = utils.MRIFile(
-                filename=nifti_file.filename,
+                filename=f'{result_str}.nii.gz',
                 content=BytesIO(compress(nifti_file.content.read()))
             )
             upload_file.is_nifti = True
@@ -436,8 +438,6 @@ async def upload(
             temp_file = tempfile.NamedTemporaryFile(suffix='.nii.gz')
             dicom2nifti.dicom_series_to_nifti(temp_dir_path, Path(temp_file.name), reorient_nifti=True)
             temp_file.seek(0) # this 99% needs to be here
-
-            result_str = ''.join(choice(ascii_lowercase) for i in range(12))
 
             upload_file = utils.MRIFile(
                 filename= f'{result_str}.nii.gz',
