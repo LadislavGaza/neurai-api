@@ -418,9 +418,10 @@ async def upload(
                 dicom_files.append(file)
 
         if nifti_file:
+            nifti_file.content.seek(0)
             upload_file = utils.MRIFile(
                 filename=nifti_file.filename,
-                content=compress(nifti_file.content)
+                content=BytesIO(compress(nifti_file.content.read()))
             )
             upload_file.is_nifti = True
         else:
@@ -444,8 +445,8 @@ async def upload(
             )
             upload_file.is_nifti = True
 
-        temp_directory.cleanup()
-        temp_file.close()
+            temp_directory.cleanup()
+            temp_file.close()
 
         new_file = upload_file.upload_encrypted(
             service=service,
