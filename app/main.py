@@ -64,6 +64,7 @@ api.add_middleware(
 )
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 
+
 @api.exception_handler(APIException)
 async def api_exception_handler(request: Request(), exc: APIException):
     return JSONResponse(
@@ -427,17 +428,37 @@ async def upload(
 
 
 @api.get('/patient/{patientID}/files')
-async def patient(patientID: str, user_id: int = Depends(validate_token)):
+async def patient(
+        patientID: str,
+        creds=Depends(validate_drive_token),
+        user_id: int = Depends(validate_token)):
+    service = build('drive', 'v3', credentials=creds)
+
+    # get folder_id for NeurAI folder
+    results = service.files().list(
+        q=const.GoogleAPI.CONTENT_FILTER,
+        fields="nextPageToken, files(id, name)"
+    ).execute()
+    items = results.get('files', [])
+
+    # if NeurAI folder doesn't exist we need to retry authorization
+    if not items:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={'message': 'Folder NeurAI not found'},
+        )
+
+    folder_id = items[0]['id']
+
+    # list the folder content
+    files = utils.get_drive_folder_content(service, folder_id)
+
     user = await crud.get_user_by_id(user_id)
-    mri_files = []
-    for file in user.mri_files:
-        if file.patient.id == patientID:
-            mri_files.append({
-                'file_id': file.file_id,
-                'filename': file.filename,
-                'created_at': file.created_at,
-                'modified_at': file.modified_at
-            })
+    mri_files = utils.get_mri_files_per_user(
+        user=user,
+        files=files,
+        patient_id=patientID
+    )
 
     return {
         'mri_files': mri_files
