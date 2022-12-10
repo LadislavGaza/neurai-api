@@ -1,4 +1,3 @@
-import google_auth_oauthlib.flow
 import jwt
 from fastapi import (
     FastAPI,
@@ -23,14 +22,6 @@ from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
 from typing import List
-from buffered_encryption.aesctr import ReadOnlyEncryptedFile
-from gzip import compress
-import tempfile
-from pathlib import Path
-import dicom2nifti
-from io import BytesIO
-from string import ascii_lowercase
-from random import choice
 
 from nibabel.spatialimages import HeaderDataError
 from dicom2nifti.exceptions import ConversionValidationError
@@ -42,16 +33,7 @@ from app import (
     utils,
     const
 )
-
-
-class APIException(Exception):
-    status_code = None
-    content = None
-
-    def __init__(self, content, status_code: int):
-        self.content = content
-        self.status_code = status_code
-
+from app.utils import APIException
 
 api = FastAPI(
     title=const.APP_NAME,
@@ -286,21 +268,7 @@ async def drive_get_files(
         user_id: int = Depends(validate_token)):
     service = build('drive', 'v3', credentials=creds)
 
-    # get folder_id for NeurAI folder
-    results = service.files().list(
-        q=const.GoogleAPI.CONTENT_FILTER,
-        fields="nextPageToken, files(id, name)"
-    ).execute()
-    items = results.get('files', [])
-
-    # if NeurAI folder doesn't exist we need to retry authorization
-    if not items:
-        raise APIException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={'message': 'Folder NeurAI not found'},
-        )
-
-    folder_id = items[0]['id']
+    folder_id = utils.get_drive_folder_id(service)
     q = f"'{folder_id}' in parents and trashed=false"
 
     # list the folder content
@@ -370,21 +338,7 @@ async def upload(
 
     service = build('drive', 'v3', credentials=creds)
 
-    # get folder_id for NeurAI folder
-    results = service.files().list(
-        q=const.GoogleAPI.CONTENT_FILTER,
-        fields="nextPageToken, files(id, name)"
-    ).execute()
-    items = results.get('files', [])
-
-    # if NeurAI folder doesn't exist we need to retry authorization
-    if not items:
-        raise APIException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={'message': 'Folder NeurAI not found'},
-        )
-
-    folder_id = items[0]['id']
+    folder_id = utils.get_drive_folder_id(service)
 
     new_files = []
     dicom_files = []
@@ -397,74 +351,34 @@ async def upload(
                 content=input_file.file
             )
 
-            file.check_file_type()
-
-            if file.is_nifti:
-                if len(files)>1:
-                    raise APIException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        content={
-                            'message': 'More than one scanning uploaded'
-                        },
-                    )
-                nifti_file = file
-            else:
-                if nifti_file:
-                    raise APIException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        content={
-                            'message': 'More than one scanning uploaded'
-                        },
-                    )
-                dicom_files.append(file)
-        
-        result_str = ''.join(choice(ascii_lowercase) for i in range(12))
-
-        if nifti_file:
-            nifti_file.content.seek(0)
-            upload_file = utils.MRIFile(
-                filename=f'{result_str}.nii.gz',
-                content=BytesIO(compress(nifti_file.content.read()))
+            nifti_file, dicom_files = file.create_valid_series(
+                files_length=len(files),
+                nifti_file=nifti_file,
+                dicom_files=dicom_files
             )
-            upload_file.is_nifti = True
-        else:
-            temp_directory = tempfile.TemporaryDirectory()
-            temp_dir_path = Path(temp_directory.name)
 
-            for dicom_file in dicom_files:
-                dicom_file.content.seek(0)
-                file_name = temp_dir_path / dicom_file.filename
-                file_name.write_bytes(dicom_file.content.read())
-
-            temp_file = tempfile.NamedTemporaryFile(suffix='.nii.gz')
-            dicom2nifti.dicom_series_to_nifti(temp_dir_path, Path(temp_file.name), reorient_nifti=True)
-            temp_file.seek(0) # this 99% needs to be here
-
-            upload_file = utils.MRIFile(
-                filename= f'{result_str}.nii.gz',
-                content=BytesIO(temp_file.read())
-            )
-            upload_file.is_nifti = True
-
-            temp_directory.cleanup()
-            temp_file.close()
-
+        upload_file = utils.MRIFile(
+                filename='',
+                content=None
+        )
+        upload_file.prepare_zipped_nifti(
+            nifti_file=nifti_file,
+            dicom_files=dicom_files
+        )
         new_file = upload_file.upload_encrypted(
             service=service,
             folder_id=folder_id
         )
-
         new_files.append(new_file)
 
         await crud.create_mri_file(
-            filename=upload_file.filename,
+            filename=new_file['name'],
             file_id=new_file['id'],
             patient_id=patientID,
             user_id=user_id
         )
 
-
-    except (HeaderDataError, WrapStructError):
+    except (HeaderDataError, WrapStructError, ConversionValidationError):
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
@@ -473,13 +387,6 @@ async def upload(
         )
     except APIException as excep:
         raise excep
-    except ConversionValidationError:
-        raise APIException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={
-                'message': 'Invalid dicom series'
-            },
-        )
     except HttpError as e:
         status_code = (
             e.status_code
@@ -504,21 +411,7 @@ async def patient(
         user_id: int = Depends(validate_token)):
     service = build('drive', 'v3', credentials=creds)
 
-    # get folder_id for NeurAI folder
-    results = service.files().list(
-        q=const.GoogleAPI.CONTENT_FILTER,
-        fields="nextPageToken, files(id, name)"
-    ).execute()
-    items = results.get('files', [])
-
-    # if NeurAI folder doesn't exist we need to retry authorization
-    if not items:
-        raise APIException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={'message': 'Folder NeurAI not found'},
-        )
-
-    folder_id = items[0]['id']
+    folder_id = utils.get_drive_folder_id(service)
 
     # list the folder content
     files = utils.get_drive_folder_content(service, folder_id)
