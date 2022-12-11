@@ -4,10 +4,29 @@ from googleapiclient.http import MediaIoBaseUpload
 from nibabel import FileHolder, Nifti1Image
 from pydicom import dcmread
 from pydicom.errors import InvalidDicomError
+import dicom2nifti
 
 from buffered_encryption.aesctr import EncryptionIterator, ReadOnlyEncryptedFile
 
+from gzip import compress
+import tempfile
+from pathlib import Path
+
+from random import choice
+from string import ascii_lowercase
+
 from app import const
+
+from fastapi import status
+
+
+class APIException(Exception):
+    status_code = None
+    content = None
+
+    def __init__(self, content, status_code: int):
+        self.content = content
+        self.status_code = status_code
 
 
 class MRIFile:
@@ -28,6 +47,30 @@ class MRIFile:
             fh = FileHolder(fileobj=self.content)
             Nifti1Image.from_file_map({'header': fh, 'image': fh})
             patient_name = None  # nifti doesn't include patient name
+
+    def create_valid_series(self, files_length, nifti_file, dicom_files):
+        self.check_file_type()
+
+        if self.is_nifti:
+            if files_length > 1:
+                raise APIException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={
+                        'message': 'More than one scanning uploaded'
+                    },
+                )
+            nifti_file = self
+        else:
+            if nifti_file:
+                raise APIException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={
+                        'message': 'More than one scanning uploaded'
+                    },
+                )
+            dicom_files.append(self)
+        
+        return nifti_file, dicom_files
 
     def encrypt(self):
         enc_file = EncryptionIterator(
@@ -77,6 +120,52 @@ class MRIFile:
         file_media = service.files().get_media(fileId=file_id).execute()
         f_encrypted = MRIFile(filename=self.filename, content=file_media)
         self.content = f_encrypted.decrypt()
+
+    def prepare_zipped_nifti(self, nifti_file, dicom_files):
+        self.filename = ''.join(choice(ascii_lowercase) for i in range(12))
+        if nifti_file:
+            nifti_file.content.seek(0)
+            self.content = BytesIO(compress(nifti_file.content.read()))
+        else:
+            temp_directory = tempfile.TemporaryDirectory()
+            temp_dir_path = Path(temp_directory.name)
+
+            for dicom_file in dicom_files:
+                dicom_file.content.seek(0)
+                temp_bytes = temp_dir_path / dicom_file.filename
+                temp_bytes.write_bytes(dicom_file.content.read())
+
+            temp_file = tempfile.NamedTemporaryFile(suffix='.nii.gz')
+            dicom2nifti.dicom_series_to_nifti(
+                temp_dir_path,
+                Path(temp_file.name),
+                reorient_nifti=True
+            )
+            temp_file.seek(0) # this 99% needs to be here
+
+            self.content = BytesIO(temp_file.read())
+
+            temp_directory.cleanup()
+            temp_file.close()
+        self.is_nifti = True
+
+
+def get_drive_folder_id(service):
+    # get folder_id for NeurAI folder
+    results = service.files().list(
+        q=const.GoogleAPI.CONTENT_FILTER,
+        fields="nextPageToken, files(id, name)"
+    ).execute()
+    items = results.get('files', [])
+
+    # if NeurAI folder doesn't exist we need to retry authorization
+    if not items:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={'message': 'Folder NeurAI not found'},
+        )
+
+    return items[0]['id']
 
 
 def get_drive_folder_content(service, folder_id):
