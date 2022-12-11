@@ -379,6 +379,9 @@ async def upload(
         )
 
     except (HeaderDataError, WrapStructError, ConversionValidationError):
+        # Unable to process files for upload
+        # For Nifti: invalid header data or wrong block size
+        # For Dicom: not enough slices (<4) or inconsistent slice increment
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={

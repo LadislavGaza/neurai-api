@@ -52,7 +52,7 @@ class MRIFile:
         self.check_file_type()
 
         if self.is_nifti:
-            if files_length>1:
+            if files_length > 1:
                 raise APIException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     content={
@@ -136,7 +136,11 @@ class MRIFile:
                 temp_bytes.write_bytes(dicom_file.content.read())
 
             temp_file = tempfile.NamedTemporaryFile(suffix='.nii.gz')
-            dicom2nifti.dicom_series_to_nifti(temp_dir_path, Path(temp_file.name), reorient_nifti=True)
+            dicom2nifti.dicom_series_to_nifti(
+                temp_dir_path,
+                Path(temp_file.name),
+                reorient_nifti=True
+            )
             temp_file.seek(0) # this 99% needs to be here
 
             self.content = BytesIO(temp_file.read())
