@@ -1,4 +1,3 @@
-import base64
 from io import BytesIO
 
 import google_auth_oauthlib.flow
@@ -26,7 +25,6 @@ from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
 from typing import List
-from buffered_encryption.aesctr import ReadOnlyEncryptedFile
 
 from nibabel.spatialimages import HeaderDataError
 from starlette.responses import StreamingResponse
@@ -115,8 +113,7 @@ async def validate_token(token: str = Depends(oauth2_scheme)):
     return payload['user_id']
 
 
-# async def validate_drive_token(user_id: int = Depends(validate_token)):
-async def validate_drive_token(user_id: int = 2):
+async def validate_drive_token(user_id: int = Depends(validate_token)):
     creds = None
     token = ''
 
@@ -276,67 +273,6 @@ async def drive_authorize_code(code: str, state: str, user_id=Depends(validate_t
     return {'message': 'Google authorization successful'}
 
 
-@api.get('/google/files')
-async def drive_get_files(
-        creds=Depends(validate_drive_token),
-        user_id: int = Depends(validate_token)):
-    service = build('drive', 'v3', credentials=creds)
-
-    # get folder_id for NeurAI folder
-    results = service.files().list(
-        q=const.GoogleAPI.CONTENT_FILTER,
-        fields="nextPageToken, files(id, name)"
-    ).execute()
-    items = results.get('files', [])
-
-    # if NeurAI folder doesn't exist we need to retry authorization
-    if not items:
-        raise APIException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={'message': 'Folder NeurAI not found'},
-        )
-
-    folder_id = items[0]['id']
-    q = f"'{folder_id}' in parents and trashed=false"
-
-    # list the folder content
-    files = []
-    page_token = None
-    while True:
-        response = service.files().list(
-            q=q,
-            fields='nextPageToken, files(id, name)',
-            pageToken=page_token
-        ).execute()
-        files.extend(response.get('files', []))
-        page_token = response.get('nextPageToken', None)
-        if page_token is None:
-            break
-
-    # read and decrypt file, code for later
-    # for file in files:
-    #     f_e = utils.MRIFile(filename=file['name'], content='')
-    #     f_e.download_decrypted(service, file['id'])
-    #     with open(file['name'], "wb") as f:
-    #         f.write(f_e.content)
-
-    # check the files uploaded by logged in user
-    users_files = []
-    user = await crud.get_user_by_id(user_id)
-    if user.mri_files:
-        drive_file_ids = [record['id'] for record in files]
-        for file in user.mri_files:
-            if file.file_id in drive_file_ids:
-                users_files.append({
-                    'id': file.file_id,
-                    'name': file.filename,
-                    'patient_name': f'{file.patient.forename} {file.patient.surname}',
-                    'modified_at': file.modified_at
-                })
-
-    return {'files': users_files}
-
-
 @api.get('/profile')
 async def profile(user_id: int = Depends(validate_token)):
     user = await crud.get_user_by_id(user_id=user_id)
@@ -345,16 +281,6 @@ async def profile(user_id: int = Depends(validate_token)):
         'email': user.email,
         'authorizedDrive': authorized_drive
     }
-
-
-@api.get('/test', dependencies=[Depends(validate_token)])
-async def test():
-    return {'email': 'abc@abc.sk'}
-
-
-@api.get('/user')
-async def user_resource(user_id: int = Depends(validate_token)):
-    return {'user': user_id}
 
 
 @api.post('/patient/{patientID}/files')
@@ -470,20 +396,19 @@ async def patient(
     }
 
 
-# @api.get('mri/{file_id}', dependencies=[Depends(validate_token)])
-@api.get('/mri/{file_id}')
+@api.get('mri/{file_id}', dependencies=[Depends(validate_token)])
 async def load_mri_file(
         file_id: str,
         creds=Depends(validate_drive_token)):
     service = build('drive', 'v3', credentials=creds)
     f_e = utils.MRIFile(filename='', content='')
     f_e.download_decrypted(service, file_id)
-    # bytes_content = BytesIO(f_e.content)
-    # bytes_content.seek(0)
-    # return StreamingResponse(
-    #     content=bytes_content,
-    #     status_code=status.HTTP_200_OK,
-    #     media_type="application/gzip",
-    # )
-    return {'file_content': base64.b64encode(f_e.content).decode('utf-8')}
-# client side  base64.b64decode(file_content)... b.toString('base64')
+
+    bytes_content = BytesIO(f_e.content)
+    bytes_content.seek(0)
+
+    return StreamingResponse(
+        content=bytes_content,
+        status_code=status.HTTP_200_OK,
+        media_type="application/gzip",
+    )
