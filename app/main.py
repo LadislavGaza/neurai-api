@@ -1,3 +1,6 @@
+import base64
+from io import BytesIO
+
 import google_auth_oauthlib.flow
 import jwt
 from fastapi import (
@@ -26,6 +29,7 @@ from typing import List
 from buffered_encryption.aesctr import ReadOnlyEncryptedFile
 
 from nibabel.spatialimages import HeaderDataError
+from starlette.responses import StreamingResponse
 
 import app.schema as s
 from app import (
@@ -111,7 +115,8 @@ async def validate_token(token: str = Depends(oauth2_scheme)):
     return payload['user_id']
 
 
-async def validate_drive_token(user_id: int = Depends(validate_token)):
+# async def validate_drive_token(user_id: int = Depends(validate_token)):
+async def validate_drive_token(user_id: int = 2):
     creds = None
     token = ''
 
@@ -464,3 +469,21 @@ async def patient(
         'mri_files': mri_files
     }
 
+
+# @api.get('mri/{file_id}', dependencies=[Depends(validate_token)])
+@api.get('/mri/{file_id}')
+async def load_mri_file(
+        file_id: str,
+        creds=Depends(validate_drive_token)):
+    service = build('drive', 'v3', credentials=creds)
+    f_e = utils.MRIFile(filename='', content='')
+    f_e.download_decrypted(service, file_id)
+    # bytes_content = BytesIO(f_e.content)
+    # bytes_content.seek(0)
+    # return StreamingResponse(
+    #     content=bytes_content,
+    #     status_code=status.HTTP_200_OK,
+    #     media_type="application/gzip",
+    # )
+    return {'file_content': base64.b64encode(f_e.content).decode('utf-8')}
+# client side  base64.b64decode(file_content)... b.toString('base64')

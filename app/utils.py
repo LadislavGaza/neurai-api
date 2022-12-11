@@ -73,10 +73,10 @@ class MRIFile:
             'createdTime': uploaded_file.get('createdTime')
         }
 
-    # def download_decrypted(self, service, file_id: int):
-    #     file_media = service.files().get_media(fileId=file_id).execute()
-    #     f_encrypted = MRIFile(filename=self.filename, content=file_media)
-    #     self.content = f_encrypted.decrypt()
+    def download_decrypted(self, service, file_id: str):
+        file_media = service.files().get_media(fileId=file_id).execute()
+        f_encrypted = MRIFile(filename=self.filename, content=file_media)
+        self.content = f_encrypted.decrypt()
 
 
 def get_drive_folder_content(service, folder_id):
