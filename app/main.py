@@ -377,7 +377,7 @@ async def patient(
     }
 
 
-@api.get('mri/{file_id}', dependencies=[Depends(validate_token)])
+@api.get('/mri/{file_id}', dependencies=[Depends(validate_token)])
 async def load_mri_file(
         file_id: str,
         creds=Depends(validate_drive_token)):
