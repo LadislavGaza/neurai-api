@@ -182,7 +182,7 @@ async def registration(user: s.UserCredential):
     return Response(status_code=status.HTTP_201_CREATED)
 
 
-@api.post('/login')
+@api.post('/login', response_model=s.Login)
 async def login(user: s.UserCredential):
     account = await crud.get_user(user)
 
@@ -219,7 +219,9 @@ async def patients_overview():
     return (await crud.get_patients()).all()
 
 
-@api.get('/google/authorize', dependencies=[Depends(validate_token)])
+@api.get('/google/authorize',
+         dependencies=[Depends(validate_token)],
+         response_model=s.AuthorizationURL)
 async def drive_authorize():
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         const.GoogleAPI.CREDS_FILE,
@@ -234,7 +236,7 @@ async def drive_authorize():
     return {'autorization_url': authorization_url}
 
 
-@api.get('/google/authorize/code')
+@api.get('/google/authorize/code', response_model=s.AuthorizationCode)
 async def drive_authorize_code(code: str, state: str, user_id=Depends(validate_token)):
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         const.GoogleAPI.CREDS_FILE,
@@ -265,7 +267,7 @@ async def drive_authorize_code(code: str, state: str, user_id=Depends(validate_t
     return {'message': 'Google authorization successful'}
 
 
-@api.get('/profile')
+@api.get('/profile', response_model=s.UserProfile)
 async def profile(user_id: int = Depends(validate_token)):
     user = await crud.get_user_by_id(user_id=user_id)
     authorized_drive = True if user.refresh_token else False
@@ -275,7 +277,7 @@ async def profile(user_id: int = Depends(validate_token)):
     }
 
 
-@api.post('/patient/{patientID}/files')
+@api.post('/patient/{patientID}/files', response_model=s.PatientFilesUpload)
 async def upload(
         patientID: str,
         user_id: int = Depends(validate_token),
@@ -353,7 +355,7 @@ async def upload(
     return {'files': new_files}
 
 
-@api.get('/patient/{patientID}/files')
+@api.get('/patient/{patientID}/files', response_model=s.PatientFiles)
 async def patient(
         patientID: str,
         creds=Depends(validate_drive_token),
