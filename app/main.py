@@ -277,7 +277,7 @@ async def profile(user_id: int = Depends(validate_token)):
     }
 
 
-@api.post('/patient/{patientID}/files', response_model=s.PatientFilesUpload)
+@api.post('/patient/{patientID}/files', response_model=s.PatientFiles)
 async def upload(
         patientID: str,
         user_id: int = Depends(validate_token),
@@ -352,7 +352,7 @@ async def upload(
             },
         )
 
-    return {'files': new_files}
+    return {'mri_files': new_files}
 
 
 @api.get('/patient/{patientID}/files', response_model=s.PatientFiles)

@@ -41,10 +41,6 @@ class MRIFile(BaseModel):
     modified_at: datetime
 
 
-class PatientFilesUpload(BaseModel):
-    files: List[MRIFile]
-
-
 class PatientFiles(BaseModel):
     mri_files: List[MRIFile]
 

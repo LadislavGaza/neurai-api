@@ -140,7 +140,7 @@ class MRIFile:
                 Path(temp_file.name),
                 reorient_nifti=True
             )
-            temp_file.seek(0) # this 99% needs to be here
+            temp_file.seek(0)  # this 99% needs to be here
 
             self.content = BytesIO(temp_file.read())
 
