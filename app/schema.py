@@ -34,22 +34,15 @@ class UserProfile(BaseModel):
     authorized_drive: bool
 
 
-class MRIFileUpload(BaseModel):
-    id: str
-    name: str
-    mimeType: str
-    createdTime: str
-
-
-class PatientFilesUpload(BaseModel):
-    files: List[MRIFileUpload]
-
-
 class MRIFile(BaseModel):
     id: str
     name: str
     created_at: datetime
     modified_at: datetime
+
+
+class PatientFilesUpload(BaseModel):
+    files: List[MRIFile]
 
 
 class PatientFiles(BaseModel):
