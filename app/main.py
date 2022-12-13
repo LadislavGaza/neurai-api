@@ -395,7 +395,7 @@ async def upload(
     return {'mri_files': new_files}
 
 
-@api.get('/patient/{patientID}/files', response_model=s.PatientFiles)
+@api.get('/patient/{patientID}/files', response_model=s.PatientFilesPatientDetail)
 async def patient(
         patientID: str,
         creds=Depends(validate_drive_token),
@@ -414,7 +414,16 @@ async def patient(
         patient_id=patientID
     )
 
+    patient = await crud.get_patient_by_id(patientID)
+    patient_info = {
+        'id': patient.id,
+        'forename': patient.forename,
+        'surname': patient.surname,
+        'created_at': patient.created_at
+        }
+
     return {
+        'patient': patient_info,
         'mri_files': mri_files
     }
 
