@@ -267,6 +267,46 @@ async def drive_authorize_code(code: str, state: str, user_id=Depends(validate_t
     return {'message': 'Google authorization successful'}
 
 
+@api.get('/google/files',
+         response_model=s.GoogleFiles)
+async def drive_get_files(
+        creds=Depends(validate_drive_token),
+        user_id: int = Depends(validate_token)):
+    service = build('drive', 'v3', credentials=creds)
+
+    folder_id = utils.get_drive_folder_id(service)
+    q = f"'{folder_id}' in parents and trashed=false"
+
+    # list the folder content
+    files = []
+    page_token = None
+    while True:
+        response = service.files().list(
+            q=q,
+            fields='nextPageToken, files(id, name)',
+            pageToken=page_token
+        ).execute()
+        files.extend(response.get('files', []))
+        page_token = response.get('nextPageToken', None)
+        if page_token is None:
+            break
+
+    users_files = []
+    user = await crud.get_user_by_id(user_id)
+    if user.mri_files:
+        drive_file_ids = [record['id'] for record in files]
+        for file in user.mri_files:
+            if file.file_id in drive_file_ids:
+                users_files.append({
+                    'id': file.file_id,
+                    'name': file.filename,
+                    'patient_name': f'{file.patient.forename} {file.patient.surname}',
+                    'modified_at': file.modified_at
+                })
+
+    return {'files': users_files}
+
+
 @api.get('/profile', response_model=s.UserProfile)
 async def profile(user_id: int = Depends(validate_token)):
     user = await crud.get_user_by_id(user_id=user_id)
