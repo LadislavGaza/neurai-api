@@ -92,7 +92,7 @@ class MRIFile:
                 const.ENC.KEY,
                 const.ENC.SIG
             )
-            return ef.read()
+            self.content = ef.read()
 
     def upload_encrypted(self, service, folder_id):
         file_metadata = {
@@ -107,19 +107,18 @@ class MRIFile:
         uploaded_file = service.files().create(
             body=file_metadata,
             media_body=media,
-            fields='id,name,mimeType,createdTime'
+            fields='id,name,createdTime'
         ).execute()
         return {
             'id': uploaded_file.get('id'),
             'name': uploaded_file.get('name'),
-            'mimeType': uploaded_file.get('mimeType'),
-            'createdTime': uploaded_file.get('createdTime')
+            'created_at': uploaded_file.get('createdTime'),
+            'modified_at': uploaded_file.get('createdTime')
         }
 
-    # def download_decrypted(self, service, file_id: int):
-    #     file_media = service.files().get_media(fileId=file_id).execute()
-    #     f_encrypted = MRIFile(filename=self.filename, content=file_media)
-    #     self.content = f_encrypted.decrypt()
+    def download_decrypted(self, service, file_id: str):
+        self.content = service.files().get_media(fileId=file_id).execute()
+        self.decrypt()
 
     def prepare_zipped_nifti(self, nifti_file, dicom_files):
         self.filename = ''.join(choice(ascii_lowercase) for i in range(12))
@@ -141,7 +140,7 @@ class MRIFile:
                 Path(temp_file.name),
                 reorient_nifti=True
             )
-            temp_file.seek(0) # this 99% needs to be here
+            temp_file.seek(0)  # this 99% needs to be here
 
             self.content = BytesIO(temp_file.read())
 

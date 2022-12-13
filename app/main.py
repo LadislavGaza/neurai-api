@@ -1,4 +1,6 @@
 import jwt
+from io import BytesIO
+
 from fastapi import (
     FastAPI,
     status,
@@ -26,6 +28,7 @@ from typing import List
 from nibabel.spatialimages import HeaderDataError
 from dicom2nifti.exceptions import ConversionValidationError
 from nibabel.wrapstruct import WrapStructError
+from starlette.responses import StreamingResponse
 
 import app.schema as s
 from app import (
@@ -179,7 +182,7 @@ async def registration(user: s.UserCredential):
     return Response(status_code=status.HTTP_201_CREATED)
 
 
-@api.post('/login')
+@api.post('/login', response_model=s.Login)
 async def login(user: s.UserCredential):
     account = await crud.get_user(user)
 
@@ -216,7 +219,9 @@ async def patients_overview():
     return (await crud.get_patients()).all()
 
 
-@api.get('/google/authorize', dependencies=[Depends(validate_token)])
+@api.get('/google/authorize',
+         dependencies=[Depends(validate_token)],
+         response_model=s.AuthorizationURL)
 async def drive_authorize():
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         const.GoogleAPI.CREDS_FILE,
@@ -231,7 +236,7 @@ async def drive_authorize():
     return {'autorization_url': authorization_url}
 
 
-@api.get('/google/authorize/code')
+@api.get('/google/authorize/code', response_model=s.AuthorizationCode)
 async def drive_authorize_code(code: str, state: str, user_id=Depends(validate_token)):
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         const.GoogleAPI.CREDS_FILE,
@@ -262,54 +267,7 @@ async def drive_authorize_code(code: str, state: str, user_id=Depends(validate_t
     return {'message': 'Google authorization successful'}
 
 
-@api.get('/google/files')
-async def drive_get_files(
-        creds=Depends(validate_drive_token),
-        user_id: int = Depends(validate_token)):
-    service = build('drive', 'v3', credentials=creds)
-
-    folder_id = utils.get_drive_folder_id(service)
-    q = f"'{folder_id}' in parents and trashed=false"
-
-    # list the folder content
-    files = []
-    page_token = None
-    while True:
-        response = service.files().list(
-            q=q,
-            fields='nextPageToken, files(id, name)',
-            pageToken=page_token
-        ).execute()
-        files.extend(response.get('files', []))
-        page_token = response.get('nextPageToken', None)
-        if page_token is None:
-            break
-
-    # read and decrypt file, code for later
-    # for file in files:
-    #     f_e = utils.MRIFile(filename=file['name'], content='')
-    #     f_e.download_decrypted(service, file['id'])
-    #     with open(file['name'], "wb") as f:
-    #         f.write(f_e.content)
-
-    # check the files uploaded by logged in user
-    users_files = []
-    user = await crud.get_user_by_id(user_id)
-    if user.mri_files:
-        drive_file_ids = [record['id'] for record in files]
-        for file in user.mri_files:
-            if file.file_id in drive_file_ids:
-                users_files.append({
-                    'id': file.file_id,
-                    'name': file.filename,
-                    'patient_name': f'{file.patient.forename} {file.patient.surname}',
-                    'modified_at': file.modified_at
-                })
-
-    return {'files': users_files}
-
-
-@api.get('/profile')
+@api.get('/profile', response_model=s.UserProfile)
 async def profile(user_id: int = Depends(validate_token)):
     user = await crud.get_user_by_id(user_id=user_id)
     authorized_drive = True if user.refresh_token else False
@@ -319,17 +277,7 @@ async def profile(user_id: int = Depends(validate_token)):
     }
 
 
-@api.get('/test', dependencies=[Depends(validate_token)])
-async def test():
-    return {'email': 'abc@abc.sk'}
-
-
-@api.get('/user')
-async def user_resource(user_id: int = Depends(validate_token)):
-    return {'user': user_id}
-
-
-@api.post('/patient/{patientID}/files')
+@api.post('/patient/{patientID}/files', response_model=s.PatientFiles)
 async def upload(
         patientID: str,
         user_id: int = Depends(validate_token),
@@ -404,10 +352,10 @@ async def upload(
             },
         )
 
-    return {'files': new_files}
+    return {'mri_files': new_files}
 
 
-@api.get('/patient/{patientID}/files')
+@api.get('/patient/{patientID}/files', response_model=s.PatientFiles)
 async def patient(
         patientID: str,
         creds=Depends(validate_drive_token),
@@ -430,3 +378,20 @@ async def patient(
         'mri_files': mri_files
     }
 
+
+@api.get('/mri/{file_id}', dependencies=[Depends(validate_token)])
+async def load_mri_file(
+        file_id: str,
+        creds=Depends(validate_drive_token)):
+    service = build('drive', 'v3', credentials=creds)
+    f_e = utils.MRIFile(filename='', content='')
+    f_e.download_decrypted(service, file_id)
+
+    bytes_content = BytesIO(f_e.content)
+    bytes_content.seek(0)
+
+    return StreamingResponse(
+        content=bytes_content,
+        status_code=status.HTTP_200_OK,
+        media_type="application/gzip",
+    )
