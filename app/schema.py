@@ -47,3 +47,14 @@ class PatientFiles(BaseModel):
 
 class Login(BaseModel):
     token: str
+
+
+class GoogleFile(BaseModel):
+    id: str
+    name: str
+    patient_name: str
+    modified_at: datetime
+
+
+class GoogleFiles(BaseModel):
+    files:  List[GoogleFile]
