@@ -1,5 +1,5 @@
 import jwt
-from io import BytesIO
+import base64
 
 from fastapi import (
     FastAPI,
@@ -28,7 +28,6 @@ from typing import List
 from nibabel.spatialimages import HeaderDataError
 from dicom2nifti.exceptions import ConversionValidationError
 from nibabel.wrapstruct import WrapStructError
-from starlette.responses import StreamingResponse
 
 import app.schema as s
 from app import (
@@ -427,11 +426,4 @@ async def load_mri_file(
     f_e = utils.MRIFile(filename='', content='')
     f_e.download_decrypted(service, file_id)
 
-    bytes_content = BytesIO(f_e.content)
-    bytes_content.seek(0)
-
-    return StreamingResponse(
-        content=bytes_content,
-        status_code=status.HTTP_200_OK,
-        media_type="application/gzip",
-    )
+    return base64.b64encode(f_e.content)
