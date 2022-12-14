@@ -45,6 +45,10 @@ class PatientFiles(BaseModel):
     mri_files: List[MRIFile]
 
 
+class PatientFilesPatientDetail(PatientFiles):
+    patient: PatientSummary
+
+
 class Login(BaseModel):
     token: str
 

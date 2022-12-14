@@ -59,6 +59,17 @@ async def get_user_by_id(user_id: int) -> m.User:
     return result.scalars().first()
 
 
+async def get_patient_by_id(patient_id: str) -> m.Patient:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Patient)
+            .where(m.Patient.id == patient_id)
+        )
+        result = await session.execute(query)
+
+    return result.scalars().first()
+
+
 async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id: int):
     mri_file_model = m.MRIFile(
         filename=filename,
