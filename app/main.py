@@ -168,6 +168,12 @@ async def validate_drive_token(user_id: int = Depends(validate_token)):
 
 @api.post('/registration')
 async def registration(user: s.UserCredential):
+    if len(user.password) < 8 or user.password.lower() == user.password \
+            or user.password.isalpha() or user.email.split('@')[0] in user.password:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={'message': 'Password invalid format'}
+        )
     try:
         user.password = argon2.hash(user.password)
         await crud.create_user(user)
