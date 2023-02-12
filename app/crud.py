@@ -10,6 +10,7 @@ import app.schema as s
 async def create_user(user: s.UserCredential):
     user_model = m.User(
         email=user.email,
+        username=user.username,
         password=user.password
     )
     async with AsyncSession(m.engine) as session:

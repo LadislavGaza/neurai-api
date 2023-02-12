@@ -5,6 +5,7 @@ from typing import List
 
 class UserCredential(BaseModel):
     email: EmailStr = Field(..., title='Email address')
+    username: str
     password: str = Field(..., title='Plain text password')
 
     class Config:
@@ -31,6 +32,7 @@ class AuthorizationCode(BaseModel):
 
 class UserProfile(BaseModel):
     email: str
+    username: str
     authorized_drive: bool
 
 

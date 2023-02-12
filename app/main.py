@@ -168,6 +168,11 @@ async def validate_drive_token(user_id: int = Depends(validate_token)):
 
 @api.post('/registration')
 async def registration(user: s.UserCredential):
+    if not user.username:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={'message': 'Username field is missing'}
+        )
     try:
         user.password = argon2.hash(user.password)
         await crud.create_user(user)
@@ -312,7 +317,8 @@ async def profile(user_id: int = Depends(validate_token)):
     authorized_drive = True if user.refresh_token else False
     return {
         'email': user.email,
-        'authorizedDrive': authorized_drive
+        'username': user.username,
+        'authorized_drive': authorized_drive
     }
 
 
