@@ -33,7 +33,7 @@ async def get_patients() -> Iterable[m.Patient]:
     return result.scalars()
 
 
-async def update_user_refresh_token(user_id: int, refresh_token: str):
+async def update_user_refresh_token(user_id: int, refresh_token: str|None):
     async with AsyncSession(m.engine) as session:
         stmt = (
             update(m.User)
