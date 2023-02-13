@@ -21,6 +21,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, nullable=False, unique=True)
+    username = Column(String, nullable=False)
     password = Column(String, nullable=False)
     refresh_token = Column(String(512))
     mri_files = relationship('MRIFile', foreign_keys='[MRIFile.created_by]', back_populates='creator')
