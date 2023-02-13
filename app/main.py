@@ -450,3 +450,9 @@ async def load_mri_file(
     f_e.download_decrypted(service, file_id)
 
     return base64.b64encode(f_e.content)
+
+
+@api.delete('/google/remove')
+async def drive_authorize(user_id: int = Depends(validate_token)):
+    await crud.update_user_refresh_token(user_id=user_id, refresh_token=None)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
