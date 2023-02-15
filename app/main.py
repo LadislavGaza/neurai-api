@@ -174,7 +174,7 @@ async def registration(user: s.UserCredential):
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={'message': 'Password invalid format'}
-
+        )
     if not user.username:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
