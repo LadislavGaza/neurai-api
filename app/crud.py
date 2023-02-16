@@ -9,9 +9,7 @@ import app.schema as s
 
 async def create_user(user: s.UserCredential):
     user_model = m.User(
-        email=user.email,
-        username=user.username,
-        password=user.password
+        email=user.email, username=user.username, password=user.password
     )
     async with AsyncSession(m.engine) as session:
         session.add(user_model)
@@ -26,6 +24,21 @@ async def get_user(user: s.UserCredential) -> m.User:
     return result.scalars().first()
 
 
+async def get_user_by_mail(email: str) -> m.User:
+    async with AsyncSession(m.engine) as session:
+        query = select(m.User).where(m.User.email == email)
+        result = await session.execute(query)
+
+    return result.scalars().first()
+
+
+async def update_user_password(user_id: str, password: str):
+    async with AsyncSession(m.engine) as session:
+        stmt = update(m.User).where(m.User.id == user_id).values(password=password)
+        await session.execute(stmt)
+        await session.commit()
+
+
 async def get_patients() -> Iterable[m.Patient]:
     async with AsyncSession(m.engine) as session:
         query = select(m.Patient)
@@ -34,7 +47,7 @@ async def get_patients() -> Iterable[m.Patient]:
     return result.scalars()
 
 
-async def update_user_refresh_token(user_id: int, refresh_token: str|None):
+async def update_user_refresh_token(user_id: int, refresh_token: str | None):
     async with AsyncSession(m.engine) as session:
         stmt = (
             update(m.User)
@@ -50,10 +63,7 @@ async def get_user_by_id(user_id: int) -> m.User:
         query = (
             select(m.User)
             .where(m.User.id == user_id)
-            .options(
-                subqueryload(m.User.mri_files)
-                .subqueryload(m.MRIFile.patient)
-            )
+            .options(subqueryload(m.User.mri_files).subqueryload(m.MRIFile.patient))
         )
         result = await session.execute(query)
 
@@ -62,10 +72,7 @@ async def get_user_by_id(user_id: int) -> m.User:
 
 async def get_patient_by_id(patient_id: str) -> m.Patient:
     async with AsyncSession(m.engine) as session:
-        query = (
-            select(m.Patient)
-            .where(m.Patient.id == patient_id)
-        )
+        query = select(m.Patient).where(m.Patient.id == patient_id)
         result = await session.execute(query)
 
     return result.scalars().first()
@@ -77,7 +84,7 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id:
         file_id=file_id,
         patient_id=patient_id,
         created_by=user_id,
-        modified_by=user_id
+        modified_by=user_id,
     )
     async with AsyncSession(m.engine) as session:
         session.add(mri_file_model)
@@ -90,7 +97,7 @@ async def create_patient(id: str, forename: str, surname: str, user_id: int):
         forename=forename,
         surname=surname,
         created_by=user_id,
-        modified_by=user_id
+        modified_by=user_id,
     )
     async with AsyncSession(m.engine) as session:
         session.add(patient_model)
