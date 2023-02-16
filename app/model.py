@@ -35,9 +35,9 @@ class Patient(Base):
     surname = Column(String, nullable=False)
 
     created_at = Column(DateTime, nullable=False, default=datetime.now)
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete='CASCADE'), nullable=False)
     modified_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    modified_by = Column(Integer, ForeignKey("users.id"))
+    modified_by = Column(Integer, ForeignKey("users.id", ondelete='CASCADE'))
 
     mri_files = relationship('MRIFile', back_populates='patient')
     creator = relationship(User, foreign_keys=[created_by])

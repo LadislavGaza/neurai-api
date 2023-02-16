@@ -4,16 +4,29 @@ from typing import List
 
 
 class UserCredential(BaseModel):
-    email: EmailStr = Field(..., title='Email address')
+    email: EmailStr = Field(..., title="Email address")
     username: str
-    password: str = Field(..., title='Plain text password')
+    password: str = Field(..., title="Plain text password")
 
     class Config:
         orm_mode = True
 
 
+class UserLoginCredentials(BaseModel):
+    email: EmailStr = Field(..., title="Email address")
+    password: str = Field(..., title="Plain text password")
+
+
+class ResetPassword(BaseModel):
+    email: EmailStr = Field(..., title="Email address")
+
+
+class ChangePassword(BaseModel):
+    password: str = Field(..., title="Plain text password")
+
+
 class PatientSummary(BaseModel):
-    id: str = Field(..., title='Patient unique identifier')
+    id: str = Field(..., title="Patient unique identifier")
     forename: str
     surname: str
     created_at: datetime
@@ -63,4 +76,4 @@ class GoogleFile(BaseModel):
 
 
 class GoogleFiles(BaseModel):
-    files:  List[GoogleFile]
+    files: List[GoogleFile]
