@@ -65,6 +65,7 @@ def data_upgrades():
     op.bulk_insert(users_tbl, [{
         'id': 1,
         'email': 'tester@gmail.com',
+        'username': 'tester',
         'password': argon2.hash('Abcdef123')
     }])
 

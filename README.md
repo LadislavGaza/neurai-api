@@ -59,3 +59,9 @@ sig = base64.b64encode(b_sig)
 print('key: ', key.decode())
 print('sig: ', sig.decode())
 ```
+
+In order to add username to users table you need to  run next commands.
+```bash
+(docker)$ alembic -c config/alembic.ini downgrade -5
+(docker)$ alembic -c config/alembic.ini -x data=true upgrade head
+```
