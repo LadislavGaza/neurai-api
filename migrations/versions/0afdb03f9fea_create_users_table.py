@@ -21,6 +21,7 @@ def upgrade() -> None:
         sa.Column('id', sa.BigInteger(), nullable=False),
         sa.Column('email', sa.String(), nullable=False),
         sa.Column('password', sa.String(), nullable=False),
+        sa.Column('username', sa.String(), nullable=False),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('email')
     )
@@ -30,4 +31,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_table('users')
-
