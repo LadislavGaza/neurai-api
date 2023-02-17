@@ -226,7 +226,7 @@ async def login(user: s.UserLoginCredentials):
 
 
 @api.post("/reset-password")
-async def resetPassword(user: s.ResetPassword):
+async def reset_password(user: s.ResetPassword):
     expiration = datetime.utcnow() + timedelta(
         seconds=const.JWT.EXPIRATION_PASSWORD_RESET
     )
@@ -241,7 +241,7 @@ async def resetPassword(user: s.ResetPassword):
 
 
 @api.post("/change-password")
-async def changePassword(
+async def change_password(
     data: s.ChangePassword,
     email: str = Depends(validate_reset_token),
 ):

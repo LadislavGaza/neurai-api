@@ -45,8 +45,8 @@ class MRIFile:
         # read nifti file
         if self.is_nifti:
             fh = FileHolder(fileobj=self.content)
-            Nifti1Image.from_file_map({'header': fh, 'image': fh})
-            patient_name = None  # nifti doesn't include patient name
+            Nifti1Image.from_file_map({"header": fh, "image": fh})
+            patient_name = None  # nifti doesn"t include patient name
 
     def create_valid_series(self, files_length, nifti_file, dicom_files):
         self.check_file_type()
@@ -56,7 +56,7 @@ class MRIFile:
                 raise APIException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     content={
-                        'message': 'More than one scanning uploaded'
+                        "message": "More than one scanning uploaded"
                     },
                 )
             nifti_file = self
@@ -65,7 +65,7 @@ class MRIFile:
                 raise APIException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     content={
-                        'message': 'More than one scanning uploaded'
+                        "message": "More than one scanning uploaded"
                     },
                 )
             dicom_files.append(self)
@@ -96,24 +96,24 @@ class MRIFile:
 
     def upload_encrypted(self, service, folder_id):
         file_metadata = {
-            'name': self.filename,
-            'parents': [folder_id]
+            "name": self.filename,
+            "parents": [folder_id]
         }
         media = MediaIoBaseUpload(
             self.encrypt(),
-            mimetype='application/octet-stream',
+            mimetype="application/octet-stream",
             resumable=True
         )
         uploaded_file = service.files().create(
             body=file_metadata,
             media_body=media,
-            fields='id,name,createdTime'
+            fields="id,name,createdTime"
         ).execute()
         return {
-            'id': uploaded_file.get('id'),
-            'name': uploaded_file.get('name'),
-            'created_at': uploaded_file.get('createdTime'),
-            'modified_at': uploaded_file.get('createdTime')
+            "id": uploaded_file.get("id"),
+            "name": uploaded_file.get("name"),
+            "created_at": uploaded_file.get("createdTime"),
+            "modified_at": uploaded_file.get("createdTime")
         }
 
     def download_decrypted(self, service, file_id: str):
@@ -121,7 +121,7 @@ class MRIFile:
         self.decrypt()
 
     def prepare_zipped_nifti(self, nifti_file, dicom_files):
-        self.filename = ''.join(choice(ascii_lowercase) for i in range(12))
+        self.filename = "".join(choice(ascii_lowercase) for i in range(12))
         if nifti_file:
             nifti_file.content.seek(0)
             self.content = BytesIO(compress(nifti_file.content.read()))
@@ -134,7 +134,7 @@ class MRIFile:
                 temp_bytes = temp_dir_path / dicom_file.filename
                 temp_bytes.write_bytes(dicom_file.content.read())
 
-            temp_file = tempfile.NamedTemporaryFile(suffix='.nii.gz')
+            temp_file = tempfile.NamedTemporaryFile(suffix=".nii.gz")
             dicom2nifti.dicom_series_to_nifti(
                 temp_dir_path,
                 Path(temp_file.name),
@@ -155,16 +155,16 @@ def get_drive_folder_id(service):
         q=const.GoogleAPI.CONTENT_FILTER,
         fields="nextPageToken, files(id, name)"
     ).execute()
-    items = results.get('files', [])
+    items = results.get("files", [])
 
-    # if NeurAI folder doesn't exist we need to retry authorization
+    # if NeurAI folder doesn"t exist we need to retry authorization
     if not items:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={'message': 'Folder NeurAI not found'},
+            content={"message": "Folder NeurAI not found"},
         )
 
-    return items[0]['id']
+    return items[0]["id"]
 
 
 def get_drive_folder_content(service, folder_id):
@@ -173,11 +173,11 @@ def get_drive_folder_content(service, folder_id):
     while True:
         response = service.files().list(
             q=f"'{folder_id}' in parents and trashed=false",
-            fields='nextPageToken, files(id, name)',
+            fields="nextPageToken, files(id, name)",
             pageToken=page_token
         ).execute()
-        files.extend(response.get('files', []))
-        page_token = response.get('nextPageToken', None)
+        files.extend(response.get("files", []))
+        page_token = response.get("nextPageToken", None)
         if page_token is None:
             break
     return files
@@ -186,13 +186,13 @@ def get_drive_folder_content(service, folder_id):
 def get_mri_files_per_user(user, files, patient_id):
     mri_files = []
     if user.mri_files:
-        drive_file_ids = [record['id'] for record in files]
+        drive_file_ids = [record["id"] for record in files]
         for file in user.mri_files:
             if file.file_id in drive_file_ids and file.patient.id == patient_id:
                 mri_files.append({
-                    'id': file.file_id,
-                    'name': file.filename,
-                    'created_at': file.created_at,
-                    'modified_at': file.modified_at
+                    "id": file.file_id,
+                    "name": file.filename,
+                    "created_at": file.created_at,
+                    "modified_at": file.modified_at
                 })
     return mri_files
