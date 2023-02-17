@@ -24,6 +24,8 @@ class User(Base):
     username = Column(String, nullable=False)
     password = Column(String, nullable=False)
     refresh_token = Column(String(512))
+    authorized_email = Column(String)
+
     mri_files = relationship('MRIFile', foreign_keys='[MRIFile.created_by]', back_populates='creator')
 
 

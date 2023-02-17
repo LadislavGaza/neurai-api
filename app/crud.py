@@ -34,7 +34,11 @@ async def get_user_by_mail(email: str) -> m.User:
 
 async def update_user_password(user_id: str, password: str):
     async with AsyncSession(m.engine) as session:
-        stmt = update(m.User).where(m.User.id == user_id).values(password=password)
+        stmt = (
+            update(m.User)
+            .where(m.User.id == user_id)
+            .values(password=password)
+        )
         await session.execute(stmt)
         await session.commit()
 
@@ -53,6 +57,17 @@ async def update_user_refresh_token(user_id: int, refresh_token: str | None):
             update(m.User)
             .where(m.User.id == user_id)
             .values(refresh_token=refresh_token)
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
+async def update_user_associated_drive(user_id: int, email: str | None):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.User)
+            .where(m.User.id == user_id)
+            .values(authorized_email=email)
         )
         await session.execute(stmt)
         await session.commit()
