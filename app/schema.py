@@ -47,6 +47,7 @@ class UserProfile(BaseModel):
     email: str
     username: str
     authorized_drive: bool
+    authorized_email: EmailStr
 
 
 class MRIFile(BaseModel):

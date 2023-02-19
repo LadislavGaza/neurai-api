@@ -24,7 +24,7 @@ Create python virtual environment in root project directory and install alembic
 ```bash
 $ virtualenv .venv
 $ source .venv/bin/activate
-$ pip install sqlalchemy asyncpg alembic
+$ pip install sqlalchemy asyncpg alembic passlib
 $ export DB_URL="postgresql+asyncpg://user:password@localhost/db"
 $ alembic -c config/alembic.ini revision --autogenerate -m "message"
 ```

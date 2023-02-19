@@ -226,7 +226,7 @@ async def login(user: s.UserLoginCredentials):
 
 
 @api.post("/reset-password")
-async def resetPassword(user: s.ResetPassword):
+async def reset_password(user: s.ResetPassword):
     expiration = datetime.utcnow() + timedelta(
         seconds=const.JWT.EXPIRATION_PASSWORD_RESET
     )
@@ -241,7 +241,7 @@ async def resetPassword(user: s.ResetPassword):
 
 
 @api.post("/change-password")
-async def changePassword(
+async def change_password(
     data: s.ChangePassword,
     email: str = Depends(validate_reset_token),
 ):
@@ -320,6 +320,13 @@ async def drive_authorize_code(
         user_id=user_id, refresh_token=creds.refresh_token
     )
 
+    service = build("drive", "v3", credentials=creds)
+    about = service.about().get(
+        fields="user(emailAddress)"
+    ).execute()
+    email = about["user"].get("emailAddress", "")
+    await crud.update_user_associated_drive(user_id=user_id, email=email)
+
     return {"message": "Google authorization successful"}
 
 
@@ -369,10 +376,12 @@ async def drive_get_files(
 async def profile(user_id: int = Depends(validate_api_token)):
     user = await crud.get_user_by_id(user_id=user_id)
     authorized_drive = True if user.refresh_token else False
+
     return {
         "email": user.email,
         "username": user.username,
         "authorized_drive": authorized_drive,
+        "authorized_email": user.authorized_email
     }
 
 
@@ -476,4 +485,6 @@ async def load_mri_file(file_id: str, creds=Depends(validate_drive_token)):
 @api.delete("/google/remove")
 async def drive_authorize(user_id: int = Depends(validate_api_token)):
     await crud.update_user_refresh_token(user_id=user_id, refresh_token=None)
+    await crud.update_user_associated_drive(user_id=user_id, email=None)
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
