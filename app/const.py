@@ -8,7 +8,7 @@ APP_NAME = "NeurAI"
 class JWT:
     SECRET = os.environ.get("JWT_SECRET")  # openssl rand -hex 32
     EXPIRATION_SECONDS = int(os.environ.get("JWT_EXPIRATION_SECONDS"))
-    EXPIRATION_PASSWORD_RESET = int(os.environ.get("JWT_EXPIRATION_PASSWORD_RESET"))
+    EXPIRATION_PASSWORD_RESET = os.environ.get("JWT_EXPIRATION_PASSWORD_RESET")
 
 
 class GoogleAPI:
