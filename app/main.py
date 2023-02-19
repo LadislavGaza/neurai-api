@@ -218,13 +218,14 @@ async def login(user: s.UserLoginCredentials):
         payload = {"user_id": account.id, "audience": "api", "exp": expiration}
         token = jwt.encode(payload, const.JWT.SECRET, "HS256")
         authorized_drive = True if account.refresh_token else False
+        authorized_email = account.authorized_email if account.authorized_email else ""
 
         return {
             "token": token,
             "email": account.email,
             "username": account.username,
             "authorized": authorized_drive,
-            "authorized_email": account.authorized_email
+            "authorized_email": authorized_email
         }
 
     raise APIException(
