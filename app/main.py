@@ -217,7 +217,15 @@ async def login(user: s.UserLoginCredentials):
         expiration = datetime.utcnow() + timedelta(seconds=const.JWT.EXPIRATION_SECONDS)
         payload = {"user_id": account.id, "audience": "api", "exp": expiration}
         token = jwt.encode(payload, const.JWT.SECRET, "HS256")
-        return {"token": token}
+        authorized_drive = True if account.refresh_token else False
+
+        return {
+            "token": token,
+            "email": account.email,
+            "username": account.username,
+            "authorized": authorized_drive,
+            "authorized_email": account.authorized_email
+        }
 
     raise APIException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -370,19 +378,6 @@ async def drive_get_files(
                 )
 
     return {"files": users_files}
-
-
-@api.get("/profile", response_model=s.UserProfile)
-async def profile(user_id: int = Depends(validate_api_token)):
-    user = await crud.get_user_by_id(user_id=user_id)
-    authorized_drive = True if user.refresh_token else False
-
-    return {
-        "email": user.email,
-        "username": user.username,
-        "authorized_drive": authorized_drive,
-        "authorized_email": user.authorized_email
-    }
 
 
 @api.post("/patient/{patientID}/files", response_model=s.PatientFiles)

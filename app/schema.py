@@ -43,13 +43,6 @@ class AuthorizationCode(BaseModel):
     message: str
 
 
-class UserProfile(BaseModel):
-    email: str
-    username: str
-    authorized_drive: bool
-    authorized_email: EmailStr
-
-
 class MRIFile(BaseModel):
     id: str
     name: str
@@ -67,6 +60,10 @@ class PatientFilesPatientDetail(PatientFiles):
 
 class Login(BaseModel):
     token: str
+    email: str
+    username: str
+    authorized: bool
+    authorized_email: str
 
 
 class GoogleFile(BaseModel):
