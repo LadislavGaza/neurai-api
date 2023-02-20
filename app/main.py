@@ -453,7 +453,6 @@ async def profile(user_id: int = Depends(validate_api_token)):
     }
 
 
-
 @api.get("/patient/{patientID}/files", response_model=s.PatientFilesPatientDetail)
 async def patient(
     patientID: str,
