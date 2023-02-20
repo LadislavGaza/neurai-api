@@ -56,8 +56,11 @@ def schema_downgrades():
 
 
 def data_upgrades():
-    meta = MetaData(bind=op.get_bind())
-    meta.reflect(only=('users', 'patients'))
+    meta = MetaData()
+    meta.reflect(
+        bind=op.get_bind(),
+        only=('users', 'patients')
+    )
 
     users_tbl = Table('users', meta)
     patients_tbl = Table('patients', meta)
