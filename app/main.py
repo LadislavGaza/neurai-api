@@ -440,6 +440,19 @@ async def upload(
     return {"mri_files": new_files}
 
 
+@api.get("/profile", response_model=s.UserProfile)
+async def profile(user_id: int = Depends(validate_api_token)):
+    user = await crud.get_user_by_id(user_id=user_id)
+    authorized_drive = True if user.refresh_token else False
+
+    return {
+        "email": user.email,
+        "username": user.username,
+        "authorized": authorized_drive,
+        "authorized_email": user.authorized_email
+    }
+
+
 @api.get("/patient/{patientID}/files", response_model=s.PatientFilesPatientDetail)
 async def patient(
     patientID: str,

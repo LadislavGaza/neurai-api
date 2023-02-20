@@ -21,6 +21,13 @@ class ResetPassword(BaseModel):
     email: EmailStr = Field(..., title="Email address")
 
 
+class UserProfile(BaseModel):
+    email: str
+    username: str
+    authorized: bool
+    authorized_email: EmailStr
+
+
 class ChangePassword(BaseModel):
     password: str = Field(..., title="Plain text password")
 
