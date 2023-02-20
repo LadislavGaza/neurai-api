@@ -448,7 +448,7 @@ async def profile(user_id: int = Depends(validate_api_token)):
     return {
         "email": user.email,
         "username": user.username,
-        "authorized_drive": authorized_drive,
+        "authorized": authorized_drive,
         "authorized_email": user.authorized_email
     }
 

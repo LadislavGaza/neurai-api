@@ -24,7 +24,7 @@ class ResetPassword(BaseModel):
 class UserProfile(BaseModel):
     email: str
     username: str
-    authorized_drive: bool
+    authorized: bool
     authorized_email: EmailStr
 
 
