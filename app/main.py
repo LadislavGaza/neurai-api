@@ -479,7 +479,7 @@ async def load_mri_file(file_id: str, creds=Depends(validate_drive_token)):
 
 
 @api.delete("/google/remove")
-async def drive_authorize(user_id: int = Depends(validate_api_token)):
+async def drive_deauthorize(user_id: int = Depends(validate_api_token)):
     await crud.update_user_refresh_token(user_id=user_id, refresh_token=None)
     await crud.update_user_associated_drive(user_id=user_id, email=None)
 
