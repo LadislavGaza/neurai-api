@@ -1,45 +1,60 @@
 import os
 from sqlalchemy import (
-    Column,
-    Integer,
     String,
-    DateTime,
-    ForeignKey,
-    BigInteger
+    ForeignKey
 )
-from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    relationship
+)
 
 
-engine = create_async_engine(os.environ.get('DB_URL'), future=True)
-Base = declarative_base()
+DB_URL = os.environ.get("DB_URL")
+engine = create_async_engine(DB_URL)
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, nullable=False, unique=True)
-    username = Column(String, nullable=False)
-    password = Column(String, nullable=False)
-    refresh_token = Column(String(512))
-    authorized_email = Column(String)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(unique=True)
+    username: Mapped[str]
+    password: Mapped[str]
+    refresh_token: Mapped[str] = mapped_column(String(512), nullable=True)
+    authorized_email: Mapped[str] = mapped_column(nullable=True)
 
-    mri_files = relationship('MRIFile', foreign_keys='[MRIFile.created_by]', back_populates='creator')
+    mri_files = relationship(
+        'MRIFile',
+        foreign_keys='[MRIFile.created_by]',
+        back_populates='creator'
+    )
 
 
 class Patient(Base):
     __tablename__ = 'patients'
 
-    id = Column(String(20), primary_key=True, index=True)
-    forename = Column(String, nullable=False)
-    surname = Column(String, nullable=False)
+    id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    forename: Mapped[str]
+    surname: Mapped[str]
 
-    created_at = Column(DateTime, nullable=False, default=datetime.now)
-    created_by = Column(Integer, ForeignKey("users.id", ondelete='CASCADE'), nullable=False)
-    modified_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    modified_by = Column(Integer, ForeignKey("users.id", ondelete='CASCADE'))
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+    created_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete='CASCADE')
+    )
+    modified_at: Mapped[datetime] = mapped_column(
+        default=datetime.now, onupdate=datetime.now, nullable=True
+    )
+    modified_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete='CASCADE'), nullable=True
+    )
 
     mri_files = relationship('MRIFile', back_populates='patient')
     creator = relationship(User, foreign_keys=[created_by])
@@ -49,15 +64,28 @@ class Patient(Base):
 class MRIFile(Base):
     __tablename__ = 'mri_files'
 
-    id = Column(BigInteger, primary_key=True, index=True)
-    filename = Column(String, nullable=False)
-    file_id = Column(String, nullable=False)
-    patient_id = Column(String(20), ForeignKey("patients.id"), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.now)
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    modified_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    modified_by = Column(Integer, ForeignKey("users.id"))
+    id: Mapped[int] = mapped_column(primary_key=True)
+    filename: Mapped[str]
+    file_id: Mapped[str]
+    patient_id: Mapped[str] = mapped_column(
+        String(20), ForeignKey("patients.id")
+    )
 
-    patient = relationship(Patient, foreign_keys=[patient_id], back_populates='mri_files')
-    creator = relationship(User, foreign_keys=[created_by], back_populates='mri_files')
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+    created_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete='CASCADE')
+    )
+    modified_at: Mapped[datetime] = mapped_column(
+        default=datetime.now, onupdate=datetime.now, nullable=True
+    )
+    modified_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete='CASCADE'), nullable=True
+    )
+
+    patient = relationship(
+        Patient, foreign_keys=[patient_id], back_populates='mri_files'
+    )
+    creator = relationship(
+        User, foreign_keys=[created_by], back_populates='mri_files'
+    )
     editor = relationship(User, foreign_keys=[modified_by])
