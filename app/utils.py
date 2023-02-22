@@ -15,7 +15,7 @@ from pathlib import Path
 from random import choice
 from string import ascii_lowercase
 
-from app import const
+from app.static import const
 
 from fastapi import status
 
