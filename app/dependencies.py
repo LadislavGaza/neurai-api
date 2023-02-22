@@ -1,0 +1,104 @@
+import jwt
+
+from fastapi import Depends, status
+from fastapi.security import OAuth2PasswordBearer
+
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+
+from app.static import const
+from app.db import crud
+from app.utils import APIException
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+
+async def validate_api_token(token: str = Depends(oauth2_scheme)):
+    unauthorized = APIException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"message": "Invalid credentials", "type": "auth"},
+    )
+    try:
+        payload = jwt.decode(token, const.JWT.SECRET, "HS256")
+        if payload["audience"] != "api":
+            raise unauthorized
+    except (jwt.DecodeError, jwt.ExpiredSignatureError):
+        raise unauthorized
+    return payload["user_id"]
+
+
+async def validate_reset_token(token: str = Depends(oauth2_scheme)):
+    unauthorized = APIException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"message": "Invalid credentials", "type": "auth"},
+    )
+    try:
+        payload = jwt.decode(token, const.JWT.SECRET, "HS256")
+        if payload["audience"] != "reset-password":
+            raise unauthorized
+    except (jwt.DecodeError, jwt.ExpiredSignatureError):
+        raise unauthorized
+
+    return payload["user_id"]
+
+
+async def validate_drive_token(user_id: int = Depends(validate_api_token)):
+    creds = None
+    token = None
+
+    refresh_token = (await crud.get_user_by_id(user_id=user_id)).refresh_token
+
+    if refresh_token:
+        web_creds = const.GoogleAPI.CREDS["web"]
+        creds = Credentials(
+            token,
+            refresh_token=refresh_token,
+            token_uri=web_creds["token_uri"],
+            client_id=web_creds["client_id"],
+            client_secret=web_creds["client_secret"],
+            scopes=const.GoogleAPI.SCOPES,
+        )
+
+    try:
+        service = build("drive", "v3", credentials=creds)
+        results = (
+            service.files()
+            .list(
+                q=const.GoogleAPI.CONTENT_FILTER,
+                fields="nextPageToken, files(id, name)",
+            )
+            .execute()
+        )
+        items = results.get("files", [])
+
+    except Exception:
+        raise APIException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"message": "Google drive authorization failed", "type": "google"},
+        )
+
+    # if the NeurAI file doesn't exists create one
+    if not items:
+        folder_metadata = {
+            "name": const.APP_NAME,
+            "mimeType": const.GoogleAPI.DRIVE_MIME_TYPE,
+        }
+        service.files().create(body=folder_metadata, fields="id").execute()
+
+        results = (
+            service.files()
+            .list(
+                q=const.GoogleAPI.CONTENT_FILTER,
+                fields="nextPageToken, files(id, name)",
+            )
+            .execute()
+        )
+        items = results.get("files", [])
+
+        if not items:
+            raise APIException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content={"message": "Folder NeurAI not found"},
+            )
+
+    return creds

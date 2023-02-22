@@ -1,9 +1,10 @@
 import os
+from datetime import datetime
+
 from sqlalchemy import (
     String,
     ForeignKey
 )
-from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import (
     DeclarativeBase,
