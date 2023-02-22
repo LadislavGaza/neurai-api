@@ -26,8 +26,7 @@ api = FastAPI(
     contact={
         "name": "Team 23",
         "url": "https://team23-22.studenti.fiit.stuba.sk/neurai",
-    },
-    debug=True
+    }
 )
 
 api.add_middleware(
