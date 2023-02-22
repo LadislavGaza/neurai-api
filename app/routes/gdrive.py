@@ -30,7 +30,9 @@ async def drive_authorize():
     )
 
     authorization_url, state = flow.authorization_url(
-        access_type="offline", include_granted_scopes="true"
+        access_type="offline",
+        include_granted_scopes="true",
+        prompt='consent'
     )
     return {"autorization_url": authorization_url}
 
@@ -114,7 +116,7 @@ async def drive_get_files(
 
 
 @router.delete("/remove")
-async def drive_remove(user_id: int = Depends(validate_api_token)):
+async def drive_remove_authorization(user_id: int = Depends(validate_api_token)):
     await crud.update_user_refresh_token(user_id=user_id, refresh_token=None)
     await crud.update_user_associated_drive(user_id=user_id, email=None)
 
