@@ -298,7 +298,7 @@ async def drive_authorize():
     )
 
     authorization_url, state = flow.authorization_url(
-        access_type="offline", include_granted_scopes="true"
+        access_type="offline", include_granted_scopes="true", prompt='consent'
     )
     return {"autorization_url": authorization_url}
 
