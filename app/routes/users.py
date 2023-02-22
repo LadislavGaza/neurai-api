@@ -1,9 +1,14 @@
 import jwt
 
-from fastapi import APIRouter, status, Response, Depends
+from fastapi import (
+    APIRouter,
+    status,
+    Response,
+    Depends
+)
+from sqlalchemy.exc import IntegrityError
 
 from passlib.hash import argon2
-from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
 
 import app.schema as s

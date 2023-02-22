@@ -1,16 +1,16 @@
+from fastapi import APIRouter, Depends, status, Response
 
 import google_auth_oauthlib.flow
-from fastapi import APIRouter, Depends, status, Response
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 
 
-from .. import utils
-from ..static import const
-from ..db import crud
-from ..dependencies import validate_api_token, validate_drive_token
+from app import utils
+from app.static import const
+from app.db import crud
+from app.dependencies import validate_api_token, validate_drive_token
 import app.schema as s
-from ..utils import APIException
+from app.utils import APIException
 
 router = APIRouter(
     prefix="/google",

@@ -1,4 +1,5 @@
 import os
+
 from sqlalchemy import (
     Column,
     Integer,
@@ -8,8 +9,9 @@ from sqlalchemy import (
     BigInteger
 )
 from sqlalchemy.orm import relationship, declarative_base
-from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine
+
+from datetime import datetime
 
 
 engine = create_async_engine(os.environ.get('DB_URL'), future=True)

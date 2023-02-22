@@ -3,7 +3,8 @@ import base64
 from fastapi import (
     FastAPI,
     status,
-    HTTPException, Depends,
+    HTTPException,
+    Depends,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
