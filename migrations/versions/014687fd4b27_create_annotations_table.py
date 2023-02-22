@@ -19,6 +19,7 @@ def upgrade() -> None:
     op.create_table('annotations',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(), nullable=False),
+        sa.Column('gdrive_filename', sa.String(), nullable=False),
         sa.Column('file_id', sa.String(), nullable=False),
         sa.Column('patient_id', sa.String(length=20), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=False),

@@ -102,6 +102,7 @@ class Annotation(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
+    gdrive_filename: Mapped[str]
     file_id: Mapped[str]
     patient_id: Mapped[str] = mapped_column(
         String(20), ForeignKey("patients.id")
