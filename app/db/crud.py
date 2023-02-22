@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import subqueryload
 from typing import Iterable
 
-import app.model as m
+import app.db.model as m
 import app.schema as s
 
 
