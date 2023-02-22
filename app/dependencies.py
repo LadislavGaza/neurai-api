@@ -24,7 +24,6 @@ async def validate_api_token(token: str = Depends(oauth2_scheme)):
             raise unauthorized
     except (jwt.DecodeError, jwt.ExpiredSignatureError):
         raise unauthorized
-    print("payload", payload)
     return payload["user_id"]
 
 
