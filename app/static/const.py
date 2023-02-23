@@ -25,7 +25,7 @@ class GoogleAPI:
 
 class CORS:
     ORIGINS = [
-        "https://team23-22.studenti.fiit.stuba.sk"
+        "https://team23-22.studenti.fiit.stuba.sk",
         "http://localhost",
         "http://localhost:4040/",
         "http://localhost:4040"
