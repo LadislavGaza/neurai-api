@@ -16,6 +16,8 @@ from app.db import crud
 from app.dependencies import validate_api_token, validate_drive_token
 from app.utils import APIException
 
+from sqlalchemy.exc import IntegrityError
+
 router = APIRouter(
     tags=["patient"],
     responses={404: {"description": "Not found"}},
@@ -113,42 +115,57 @@ async def patient(
         "id": patient.id,
         "forename": patient.forename,
         "surname": patient.surname,
+        "birth_date": patient.birth_date,
         "created_at": patient.created_at,
     }
 
     return {"patient": patient_info, "mri_files": mri_files}
 
 
-@router.post("/patients")
+@router.post("/patients", response_model=s.PatientSummary)
 async def add_patient(
-    id: str,
-    forename: str,
-    surname: str,
-    birth_date: date,
+    patient: s.NewPatient,
     user_id: int = Depends(validate_api_token)
 ):
 
-    if not forename:
+    if not patient.forename:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"message": "Patient forename field is missing"},
         )
-    if not surname:
+    if not patient.surname:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"message": "Patient surname field is missing"},
         )
-    if not date:
+    if not patient.birth_date:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"message": "Patient date of birth field is missing"},
         )
 
-    if not id:
-        id = await utils.generate_unique_patient_id()
+    if not patient.id:
+        patient.id = await utils.generate_unique_patient_id()
+
+    try:
+        patient_birth_date = date.fromisoformat(patient.birth_date)
+
+    except ValueError:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": "Patient date of birth has invalid format"},
+        )
         
     try:
-        await crud.create_patient(patient)
+        await crud.create_patient(
+            id=patient.id,
+            forename=patient.forename,
+            surname=patient.surname,
+            birth_date=patient_birth_date,
+            user_id=user_id
+        )
+
+        new_patient = await crud.get_patient_by_id(patient.id)
 
     except IntegrityError:
         raise APIException(
@@ -156,4 +173,4 @@ async def add_patient(
             content={"message": "Patient with this ID already exists"},
         )
 
-    return {"patient": patient_id}
+    return new_patient

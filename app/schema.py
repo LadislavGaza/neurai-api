@@ -43,6 +43,13 @@ class PatientSummary(BaseModel):
         orm_mode = True
 
 
+class NewPatient(BaseModel):
+    id: str = Field(..., title="Patient unique identifier")
+    forename: str
+    surname: str
+    birth_date: str
+
+
 class AuthorizationURL(BaseModel):
     autorization_url: str
 
