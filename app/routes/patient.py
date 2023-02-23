@@ -8,6 +8,7 @@ from nibabel.wrapstruct import WrapStructError
 from dicom2nifti.exceptions import ConversionValidationError
 
 from typing import List
+from datetime import date
 
 from app import utils
 import app.schema as s
@@ -116,3 +117,43 @@ async def patient(
     }
 
     return {"patient": patient_info, "mri_files": mri_files}
+
+
+@router.post("/patients")
+async def add_patient(
+    id: str,
+    forename: str,
+    surname: str,
+    birth_date: date,
+    user_id: int = Depends(validate_api_token)
+):
+
+    if not forename:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": "Patient forename field is missing"},
+        )
+    if not surname:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": "Patient surname field is missing"},
+        )
+    if not date:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": "Patient date of birth field is missing"},
+        )
+
+    if not id:
+        id = await utils.generate_unique_patient_id()
+        
+    try:
+        await crud.create_patient(patient)
+
+    except IntegrityError:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": "Patient with this ID already exists"},
+        )
+
+    return {"patient": patient_id}
