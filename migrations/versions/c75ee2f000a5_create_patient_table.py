@@ -10,9 +10,6 @@ import sqlalchemy as sa
 from sqlalchemy import Table, MetaData
 
 from passlib.hash import argon2
-from datetime import datetime
-import string
-import random
 
 
 revision = "c75ee2f000a5"
@@ -63,7 +60,6 @@ def data_upgrades():
     )
 
     users_tbl = Table("users", meta)
-    patients_tbl = Table("patients", meta)
 
     op.bulk_insert(users_tbl, [{
         "id": 1,
