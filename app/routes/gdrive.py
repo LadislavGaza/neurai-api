@@ -8,9 +8,12 @@ from google.auth.transport.requests import Request
 from app import utils
 from app.static import const
 from app.db import crud
-from app.dependencies import validate_api_token, validate_drive_token
+from app.dependencies import (
+    validate_api_token, validate_drive_token, get_logger
+)
 import app.schema as s
 from app.utils import APIException
+
 
 router = APIRouter(
     prefix="/google",
@@ -39,7 +42,10 @@ async def drive_authorize():
 
 @router.get("/authorize/code", response_model=s.AuthorizationCode)
 async def drive_authorize_code(
-    code: str, state: str, user_id=Depends(validate_api_token)
+    code: str,
+    state: str,
+    user_id=Depends(validate_api_token),
+    log = Depends(get_logger)
 ):
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         const.GoogleAPI.CREDS_FILE,
@@ -69,6 +75,12 @@ async def drive_authorize_code(
     ).execute()
     email = about["user"].get("emailAddress", "")
     await crud.update_user_associated_drive(user_id=user_id, email=email)
+
+    user = await crud.get_user_by_id(user_id)
+    log.info(
+        f"User {user.username} has authorized access to Google Drive.",
+        extra={"topic": "GOOGLE"}
+    )
 
     return {"message": "Google authorization successful"}
 
@@ -116,8 +128,17 @@ async def drive_get_files(
 
 
 @router.delete("/remove")
-async def drive_remove_authorization(user_id: int = Depends(validate_api_token)):
+async def drive_remove_authorization(
+    user_id: int = Depends(validate_api_token),
+    log = Depends(get_logger)
+):
     await crud.update_user_refresh_token(user_id=user_id, refresh_token=None)
     await crud.update_user_associated_drive(user_id=user_id, email=None)
+
+    user = await crud.get_user_by_id(user_id)
+    log.info(
+        f"User {user.username} has revoked authorization for Google Drive.",
+        extra={"topic": "GOOGLE"}
+    )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

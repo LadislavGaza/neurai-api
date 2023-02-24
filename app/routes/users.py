@@ -14,9 +14,12 @@ from datetime import datetime, timedelta
 import app.schema as s
 from app.static import const
 from app.db import crud
-from app.dependencies import validate_reset_token, validate_api_token
+from app.dependencies import (
+    validate_reset_token, validate_api_token, get_logger
+)
 from app.services.smtpService import send_reset_email
 from app.utils import APIException
+
 
 router = APIRouter(
     tags=["user"],
@@ -25,7 +28,7 @@ router = APIRouter(
 
 
 @router.post("/registration")
-async def registration(user: s.UserCredential):
+async def registration(user: s.UserCredential, log = Depends(get_logger)):
 
     if (
         len(user.password) < 8
@@ -52,11 +55,16 @@ async def registration(user: s.UserCredential):
             content={"message": "User with this name already exists"},
         )
 
+    log.info(
+        f"A new user {user.username} has registered.",
+        extra={"topic": "REGISTRATION"}
+    )
+
     return Response(status_code=status.HTTP_201_CREATED)
 
 
 @router.post("/login", response_model=s.Login)
-async def login(user: s.UserLoginCredentials):
+async def login(user: s.UserLoginCredentials, log = Depends(get_logger)):
     account = await crud.get_user(user)
 
     valid_credentials = account is not None and argon2.verify(
@@ -69,6 +77,11 @@ async def login(user: s.UserLoginCredentials):
         token = jwt.encode(payload, const.JWT.SECRET, "HS256")
         authorized_drive = True if account.refresh_token else False
         authorized_email = account.authorized_email if account.authorized_email else ""
+
+        log.info(
+            f"User {account.username} has logged in.",
+            extra={"topic": "LOGIN"}
+        )
 
         return {
             "token": token,
@@ -85,7 +98,7 @@ async def login(user: s.UserLoginCredentials):
 
 
 @router.post("/reset-password")
-async def reset_password(user: s.ResetPassword):
+async def reset_password(user: s.ResetPassword, log = Depends(get_logger)):
     expiration = datetime.utcnow() + timedelta(
         seconds=const.JWT.EXPIRATION_PASSWORD_RESET
     )
@@ -96,6 +109,12 @@ async def reset_password(user: s.ResetPassword):
     }
     token = jwt.encode(payload, const.JWT.SECRET, "HS256")
     send_reset_email(to=user.email, token=token)
+
+    log.info(
+        f"User with e-mail {user.email} requested password reset.",
+        extra={"topic": "REGISTRATION"}
+    )
+
     return {"message": "Password reset email sent successfully"}
 
 
@@ -103,6 +122,7 @@ async def reset_password(user: s.ResetPassword):
 async def change_password(
     data: s.ChangePassword,
     email: str = Depends(validate_reset_token),
+    log = Depends(get_logger)
 ):
     user = await crud.get_user_by_mail(email)
     if not user:
@@ -122,6 +142,11 @@ async def change_password(
         )
     password_hash = argon2.hash(data.password)
     await crud.update_user_password(user_id=user.id, password=password_hash)
+
+    log.info(
+        f"User {user.username} changed password.",
+        extra={"topic": "REGISTRATION"}
+    )
 
     return {"message": "Password successfully changed"}
 

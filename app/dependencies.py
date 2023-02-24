@@ -1,4 +1,5 @@
 import jwt
+import logging
 
 from fastapi import Depends, status
 from fastapi.security import OAuth2PasswordBearer
@@ -13,7 +14,14 @@ from app.utils import APIException
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
-async def validate_api_token(token: str = Depends(oauth2_scheme)):
+async def get_logger():
+    return logging.getLogger(const.APP_NAME)
+
+
+async def validate_api_token(
+    token: str = Depends(oauth2_scheme),
+    log = Depends(get_logger)
+):
     unauthorized = APIException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         content={"message": "Invalid credentials", "type": "auth"},
@@ -22,8 +30,18 @@ async def validate_api_token(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(token, const.JWT.SECRET, "HS256")
         if payload["audience"] != "api":
             raise unauthorized
-    except (jwt.DecodeError, jwt.ExpiredSignatureError):
+
+    except jwt.DecodeError:
         raise unauthorized
+
+    except jwt.ExpiredSignatureError:
+        user_id = payload.get("user_id")
+        log.info(
+            f"User with ID {user_id} has timed out.",
+            extra={"topic": "LOGOUT"}
+        )
+        raise unauthorized
+
     return payload["user_id"]
 
 
@@ -42,11 +60,15 @@ async def validate_reset_token(token: str = Depends(oauth2_scheme)):
     return payload["user_id"]
 
 
-async def validate_drive_token(user_id: int = Depends(validate_api_token)):
+async def validate_drive_token(
+    user_id: int = Depends(validate_api_token),
+    log = Depends(get_logger)
+):
     creds = None
     token = None
 
-    refresh_token = (await crud.get_user_by_id(user_id=user_id)).refresh_token
+    user = await crud.get_user_by_id(user_id=user_id)
+    refresh_token = user.refresh_token
 
     if refresh_token:
         web_creds = const.GoogleAPI.CREDS["web"]
@@ -72,6 +94,10 @@ async def validate_drive_token(user_id: int = Depends(validate_api_token)):
         items = results.get("files", [])
 
     except Exception:
+        log.info(
+            f"User {user.username} used invalid refresh token for Google Drive.",
+            extra={"topic": "GOOGLE"}
+        )
         raise APIException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"message": "Google drive authorization failed", "type": "google"},
@@ -102,3 +128,4 @@ async def validate_drive_token(user_id: int = Depends(validate_api_token)):
             )
 
     return creds
+

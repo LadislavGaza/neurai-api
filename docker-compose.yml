@@ -10,6 +10,7 @@ services:
       - "config/api.env"
     volumes:
       - .:/neurai-api
+      - logs:/var/log
     depends_on:
       - "db"
     restart: always
@@ -25,3 +26,4 @@ services:
 
 volumes:
   pgdata:
+  logs:
