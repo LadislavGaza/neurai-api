@@ -35,7 +35,7 @@ async def drive_authorize():
     authorization_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
-        prompt='consent'
+        prompt="consent"
     )
     return {"autorization_url": authorization_url}
 
@@ -78,7 +78,7 @@ async def drive_authorize_code(
 
     user = await crud.get_user_by_id(user_id)
     log.info(
-        f"User {user.username} has authorized access to Google Drive.",
+        f"User '{user.username}' has authorized access to Google Drive.",
         extra={"topic": "GOOGLE"}
     )
 
@@ -137,7 +137,7 @@ async def drive_remove_authorization(
 
     user = await crud.get_user_by_id(user_id)
     log.info(
-        f"User {user.username} has revoked authorization for Google Drive.",
+        f"User '{user.username}' has revoked authorization for Google Drive.",
         extra={"topic": "GOOGLE"}
     )
 

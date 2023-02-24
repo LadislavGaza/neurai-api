@@ -35,9 +35,9 @@ async def validate_api_token(
         raise unauthorized
 
     except jwt.ExpiredSignatureError:
-        user_id = payload.get("user_id")
+        username = payload.get("username")
         log.info(
-            f"User with ID {user_id} has timed out.",
+            f"User '{username}' has timed out.",
             extra={"topic": "LOGOUT"}
         )
         raise unauthorized
@@ -54,6 +54,7 @@ async def validate_reset_token(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(token, const.JWT.SECRET, "HS256")
         if payload["audience"] != "reset-password":
             raise unauthorized
+
     except (jwt.DecodeError, jwt.ExpiredSignatureError):
         raise unauthorized
 
@@ -95,7 +96,7 @@ async def validate_drive_token(
 
     except Exception:
         log.info(
-            f"User {user.username} used invalid refresh token for Google Drive.",
+            f"User '{user.username}' used invalid refresh token for Google Drive.",
             extra={"topic": "GOOGLE"}
         )
         raise APIException(

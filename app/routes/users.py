@@ -72,14 +72,23 @@ async def login(user: s.UserLoginCredentials, log = Depends(get_logger)):
     )
 
     if valid_credentials:
-        expiration = datetime.utcnow() + timedelta(seconds=const.JWT.EXPIRATION_SECONDS)
-        payload = {"user_id": account.id, "audience": "api", "exp": expiration}
+        expiration = (
+            datetime.utcnow() +
+            timedelta(seconds=const.JWT.EXPIRATION_SECONDS)
+        )
+        payload = {
+            "user_id": account.id,
+            "username": account.username,
+            "audience": "api",
+            "exp": expiration
+        }
         token = jwt.encode(payload, const.JWT.SECRET, "HS256")
+
         authorized_drive = True if account.refresh_token else False
         authorized_email = account.authorized_email if account.authorized_email else ""
 
         log.info(
-            f"User {account.username} has logged in.",
+            f"User '{account.username}' has logged in.",
             extra={"topic": "LOGIN"}
         )
 
@@ -91,6 +100,13 @@ async def login(user: s.UserLoginCredentials, log = Depends(get_logger)):
             "authorized_email": authorized_email
         }
 
+    if account is not None:
+        log.info(
+            f"User '{account.username}' failed to log in "
+            f"due to incorrect credentials.",
+            extra={"topic": "LOGIN"}
+        )
+
     raise APIException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         content={"message": "Wrong email or password", "type": "auth"},
@@ -99,8 +115,9 @@ async def login(user: s.UserLoginCredentials, log = Depends(get_logger)):
 
 @router.post("/reset-password")
 async def reset_password(user: s.ResetPassword, log = Depends(get_logger)):
-    expiration = datetime.utcnow() + timedelta(
-        seconds=const.JWT.EXPIRATION_PASSWORD_RESET
+    expiration = (
+        datetime.utcnow() +
+        timedelta(seconds=const.JWT.EXPIRATION_PASSWORD_RESET)
     )
     payload = {
         "audience": "reset-password",
@@ -110,8 +127,9 @@ async def reset_password(user: s.ResetPassword, log = Depends(get_logger)):
     token = jwt.encode(payload, const.JWT.SECRET, "HS256")
     send_reset_email(to=user.email, token=token)
 
+    account = await crud.get_user_by_mail(user.email)
     log.info(
-        f"User with e-mail {user.email} requested password reset.",
+        f"User '{account.username}' requested password reset.",
         extra={"topic": "REGISTRATION"}
     )
 
@@ -144,7 +162,7 @@ async def change_password(
     await crud.update_user_password(user_id=user.id, password=password_hash)
 
     log.info(
-        f"User {user.username} changed password.",
+        f"User '{user.username}' changed password.",
         extra={"topic": "REGISTRATION"}
     )
 

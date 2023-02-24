@@ -3,6 +3,7 @@ import json
 import base64
 import logging
 
+
 APP_NAME = "NeurAI"
 
 
@@ -26,7 +27,7 @@ class GoogleAPI:
 
 class CORS:
     ORIGINS = [
-        "https://team23-22.studenti.fiit.stuba.sk"
+        "https://team23-22.studenti.fiit.stuba.sk",
         "http://localhost",
         "http://localhost:4040/",
         "http://localhost:4040"
@@ -47,7 +48,7 @@ class LOGGING:
         "formatters": {
             "default": {
                 "()": "uvicorn.logging.DefaultFormatter",
-                "fmt": "%(asctime)s [%(levelname)s] [%(name)s] [%(module)s] %(message)s",
+                "fmt": "%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
                 "datefmt": "%Y-%m-%d %H:%M:%S"
             },
             "user": {
