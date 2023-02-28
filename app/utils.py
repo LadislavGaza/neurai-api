@@ -1,7 +1,15 @@
 from io import BytesIO
+from typing import List
+
+from dicom2nifti.exceptions import ConversionValidationError
+from google.auth.api_key import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseUpload
 
 from nibabel import FileHolder, Nifti1Image
+from nibabel.spatialimages import HeaderDataError
+from nibabel.wrapstruct import WrapStructError
 from pydicom import dcmread
 from pydicom.errors import InvalidDicomError
 import dicom2nifti
@@ -15,9 +23,10 @@ from pathlib import Path
 from random import choice
 from string import ascii_lowercase
 
+from app.db import crud
 from app.static import const
 
-from fastapi import status
+from fastapi import status, UploadFile
 
 
 class APIException(Exception):
@@ -69,7 +78,7 @@ class MRIFile:
                     },
                 )
             dicom_files.append(self)
-        
+
         return nifti_file, dicom_files
 
     def encrypt(self):
@@ -196,3 +205,74 @@ def get_mri_files_per_user(user, files, patient_id):
                     "modified_at": file.modified_at
                 })
     return mri_files
+
+
+async def file_uploader(
+        files: List[UploadFile],
+        creds: Credentials,
+        patient_id: str,
+        user_id: int,
+        scan_type: str,
+        mri_id,
+        name: str
+):
+    service = build("drive", "v3", credentials=creds)
+
+    folder_id = get_drive_folder_id(service)
+    new_files = []
+    dicom_files = []
+    nifti_file = None
+    try:
+        for input_file in files:
+            file = MRIFile(filename=input_file.filename, content=input_file.file)
+
+            nifti_file, dicom_files = file.create_valid_series(
+                files_length=len(files), nifti_file=nifti_file, dicom_files=dicom_files
+            )
+
+        upload_file = MRIFile(filename="", content=None)
+        upload_file.prepare_zipped_nifti(nifti_file=nifti_file, dicom_files=dicom_files)
+        new_file = upload_file.upload_encrypted(service=service, folder_id=folder_id)
+        new_files.append(new_file)
+
+    except (HeaderDataError, WrapStructError, ConversionValidationError):
+        # Unable to process files for upload
+        # For Nifti: invalid header data or wrong block size
+        # For Dicom: not enough slices (<4) or inconsistent slice increment
+        raise APIException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"message": "File(s) must be valid dicom or nifti format"},
+        )
+    except APIException as excep:
+        raise excep
+    except HttpError as e:
+        status_code = (
+            e.status_code if e.status_code else status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+        raise APIException(
+            status_code=status_code,
+            content={"message": "Google Drive upload failed"},
+        )
+
+    if scan_type == 'mri':
+        await crud.create_mri_file(
+            filename=new_file["name"],
+            file_id=new_file["id"],
+            patient_id=patient_id,
+            user_id=user_id,
+        )
+    else:
+        if name is None:
+            # name to be generated
+            pass
+        await crud.create_annotation_file(
+            name=name,
+            filename=new_file["name"],
+            file_id=new_file["id"],
+            mri_id=mri_id,
+            patient_id=patient_id,
+            user_id=user_id,
+        )
+
+    return new_files

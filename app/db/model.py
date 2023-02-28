@@ -97,6 +97,8 @@ class MRIFile(Base):
     )
     editor = relationship(User, foreign_keys=[modified_by])
 
+    annotations = relationship('Annotation', back_populates='mri_file')
+
 
 class Annotation(Base):
     __tablename__ = 'annotations'
@@ -105,10 +107,12 @@ class Annotation(Base):
     name: Mapped[str]
     filename: Mapped[str]
     file_id: Mapped[str]
+    mri_file_id: Mapped[int] = mapped_column(
+        ForeignKey("mri_files.id", ondelete="CASCADE")
+    )
     patient_id: Mapped[str] = mapped_column(
         String(20), ForeignKey("patients.id")
     )
-
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete='CASCADE')
@@ -127,3 +131,7 @@ class Annotation(Base):
         User, foreign_keys=[created_by], back_populates='annotations'
     )
     editor = relationship(User, foreign_keys=[modified_by])
+
+    mri_file = relationship(
+        MRIFile, foreign_keys=[mri_file_id], back_populates='annotations'
+    )
