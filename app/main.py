@@ -1,3 +1,7 @@
+import base64
+import logging
+from logging.config import dictConfig
+
 from fastapi import (
     FastAPI,
     status,
@@ -11,6 +15,10 @@ from google.auth.transport.requests import Request
 from app.routes import patient, gdrive, users, mri
 from app.static import const
 from app.utils import APIException
+
+
+log = const.LOGGING()
+dictConfig(log.CONFIG)
 
 
 api = FastAPI(
