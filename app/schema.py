@@ -45,9 +45,9 @@ class PatientSummary(BaseModel):
 
 class NewPatient(BaseModel):
     id: str = Field(..., title="Patient unique identifier")
-    forename: str
-    surname: str
-    birth_date: date
+    forename: str = Field(..., min_length=1)
+    surname: str = Field(..., min_length=1)
+    birth_date: date = Field(...)
 
 
 class AuthorizationURL(BaseModel):

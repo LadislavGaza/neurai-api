@@ -131,22 +131,6 @@ async def add_patient(
     user_id: int = Depends(validate_api_token)
 ):
 
-    if not patient.forename:
-        raise APIException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Patient forename field is missing"},
-        )
-    if not patient.surname:
-        raise APIException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Patient surname field is missing"},
-        )
-    if not patient.birth_date:
-        raise APIException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Patient date of birth field is missing"},
-        )
-
     if not patient.id:
         patient_exists = True
         while patient_exists:
