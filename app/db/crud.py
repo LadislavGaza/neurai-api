@@ -109,17 +109,14 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id:
 
 
 async def create_patient(
-    id: str,
-    forename: str,
-    surname: str,
-    birth_date: date,
+    patient: s.NewPatient,
     user_id: int
 ):
     patient_model = m.Patient(
-        id=id,
-        forename=forename,
-        surname=surname,
-        birth_date=birth_date,
+        id=patient.id,
+        forename=patient.forename,
+        surname=patient.surname,
+        birth_date=patient.birth_date,
         created_by=user_id,
         modified_by=user_id,
     )

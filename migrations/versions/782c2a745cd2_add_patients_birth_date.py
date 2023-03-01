@@ -15,8 +15,8 @@ import random
 
 
 # revision identifiers, used by Alembic.
-revision = '782c2a745cd2'
-down_revision = '014687fd4b27'
+revision = "782c2a745cd2"
+down_revision = "014687fd4b27"
 branch_labels = None
 depends_on = None
 
@@ -28,17 +28,17 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    if context.get_x_argument(as_dictionary=True).get('data', None):
+    if context.get_x_argument(as_dictionary=True).get("data", None):
         data_downgrades()
     schema_downgrades()
 
 
 def schema_upgrades():
-    op.add_column('patients', sa.Column('birth_date', sa.Date(), nullable=False))
+    op.add_column("patients", sa.Column("birth_date", sa.Date(), nullable=False))
 
 
 def schema_downgrades():
-    op.drop_column('patients', 'birth_date')
+    op.drop_column("patients", "birth_date")
 
 
 def data_upgrades():

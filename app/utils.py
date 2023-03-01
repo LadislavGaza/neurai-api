@@ -200,10 +200,5 @@ def get_mri_files_per_user(user, files, patient_id):
     return mri_files
 
 
-async def generate_unique_patient_id():
-    patient_id = ''.join(choices(string.ascii_uppercase + string.digits, k=10))
-    patient = patient = await crud.get_patient_by_id(patient_id)
-    while patient:
-        patient_id = ''.join(choices(string.ascii_uppercase + string.digits, k=10))
-        patient = patient = await crud.get_patient_by_id(patient_id)
-    return patient_id
+def generate_unique_patient_id():
+    return ''.join(choices(string.ascii_uppercase + string.digits, k=10))

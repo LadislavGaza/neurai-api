@@ -148,32 +148,31 @@ async def add_patient(
         )
 
     if not patient.id:
-        patient.id = await utils.generate_unique_patient_id()
+        patient_exists = True
+        while patient_exists:
+            patient.id = utils.generate_unique_patient_id()
+            patient_exists = False
+            try:
+                await crud.create_patient(
+                    patient=patient,
+                    user_id=user_id
+                )
 
-    try:
-        patient_birth_date = date.fromisoformat(patient.birth_date)
+            except IntegrityError:
+                patient_exists = True
+    else:
+        try:
+            await crud.create_patient(
+                patient=patient,
+                user_id=user_id
+            )
 
-    except ValueError:
-        raise APIException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Patient date of birth has invalid format"},
-        )
-        
-    try:
-        await crud.create_patient(
-            id=patient.id,
-            forename=patient.forename,
-            surname=patient.surname,
-            birth_date=patient_birth_date,
-            user_id=user_id
-        )
+        except IntegrityError:
+            raise APIException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                content={"message": "Patient with this ID already exists"},
+            )
 
-        new_patient = await crud.get_patient_by_id(patient.id)
-
-    except IntegrityError:
-        raise APIException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Patient with this ID already exists"},
-        )
+    new_patient = await crud.get_patient_by_id(patient.id)
 
     return new_patient
