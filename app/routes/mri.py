@@ -62,7 +62,7 @@ async def upload_annotation(
     "/{mri_ID}/annotations/{annotation_ID}",
     dependencies=[Depends(validate_api_token)]
 )
-async def drive_remove_authorization(
+async def remove_annotation(
     annotation_ID: str,
     creds=Depends(validate_drive_token)
 ):
