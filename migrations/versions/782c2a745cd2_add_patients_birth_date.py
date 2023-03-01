@@ -1,7 +1,7 @@
 """add_patients_birth_date
 
 Revision ID: 782c2a745cd2
-Revises: cfc0d68d3fea
+Revises: 014687fd4b27
 Create Date: 2023-02-22 23:53:58.515801
 
 """
@@ -16,13 +16,12 @@ import random
 
 # revision identifiers, used by Alembic.
 revision = '782c2a745cd2'
-down_revision = 'cfc0d68d3fea'
+down_revision = '014687fd4b27'
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("delete from patients")
     schema_upgrades()
     if context.get_x_argument(as_dictionary=True).get("data", None):
         data_upgrades()
@@ -36,6 +35,7 @@ def downgrade() -> None:
 
 def schema_upgrades():
     op.add_column('patients', sa.Column('birth_date', sa.Date(), nullable=False))
+
 
 def schema_downgrades():
     op.drop_column('patients', 'birth_date')

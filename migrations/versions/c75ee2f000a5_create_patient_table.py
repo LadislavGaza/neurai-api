@@ -70,5 +70,4 @@ def data_upgrades():
 
 
 def data_downgrades():
-    op.execute("delete from patients")
     op.execute("delete from users where id = 1")
