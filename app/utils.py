@@ -12,10 +12,12 @@ from gzip import compress
 import tempfile
 from pathlib import Path
 
-from random import choice
+from random import choice, choices
+import string
 from string import ascii_lowercase
 
 from app.static import const
+from app.db import crud
 
 from fastapi import status
 
@@ -196,3 +198,7 @@ def get_mri_files_per_user(user, files, patient_id):
                     "modified_at": file.modified_at
                 })
     return mri_files
+
+
+def generate_unique_patient_id():
+    return ''.join(choices(string.ascii_uppercase + string.digits, k=10))

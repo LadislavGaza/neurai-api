@@ -8,6 +8,7 @@ from nibabel.wrapstruct import WrapStructError
 from dicom2nifti.exceptions import ConversionValidationError
 
 from typing import List
+from datetime import date
 
 from app import utils
 import app.schema as s
@@ -15,6 +16,7 @@ from app.db import crud
 from app.dependencies import validate_api_token, validate_drive_token
 from app.utils import APIException
 
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(
     tags=["patient"],
@@ -116,7 +118,45 @@ async def patient(
         "id": patient.id,
         "forename": patient.forename,
         "surname": patient.surname,
+        "birth_date": patient.birth_date,
         "created_at": patient.created_at,
     }
 
     return {"patient": patient_info, "mri_files": mri_files}
+
+
+@router.post("/patients", response_model=s.PatientSummary)
+async def add_patient(
+    patient: s.NewPatient,
+    user_id: int = Depends(validate_api_token)
+):
+
+    if not patient.id:
+        patient_exists = True
+        while patient_exists:
+            patient.id = utils.generate_unique_patient_id()
+            patient_exists = False
+            try:
+                await crud.create_patient(
+                    patient=patient,
+                    user_id=user_id
+                )
+
+            except IntegrityError:
+                patient_exists = True
+    else:
+        try:
+            await crud.create_patient(
+                patient=patient,
+                user_id=user_id
+            )
+
+        except IntegrityError:
+            raise APIException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                content={"message": "Patient with this ID already exists"},
+            )
+
+    new_patient = await crud.get_patient_by_id(patient.id)
+
+    return new_patient
