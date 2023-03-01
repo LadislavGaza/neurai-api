@@ -1,4 +1,6 @@
 import base64
+import logging
+from logging.config import dictConfig
 
 from fastapi import (
     FastAPI,
@@ -17,6 +19,11 @@ from app.routes import patient, gdrive, users
 from app.static import const
 from app.utils import APIException
 from app import utils
+
+
+log = const.LOGGING()
+dictConfig(log.CONFIG)
+
 
 api = FastAPI(
     title=const.APP_NAME,
@@ -64,6 +71,7 @@ async def validation_exception_handler(request, err: HTTPException):
             status_code=err.status_code,
             content={"message": "Exception", "detail": err.detail},
         )
+
 
 api.include_router(users.router)
 api.include_router(patient.router)

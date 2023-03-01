@@ -92,7 +92,10 @@ async def upload(
     return {"mri_files": new_files}
 
 
-@router.get("/patient/{patientID}/files", response_model=s.PatientFilesPatientDetail)
+@router.get(
+    "/patient/{patientID}/files",
+    response_model=s.PatientFilesPatientDetail
+)
 async def patient(
     patientID: str,
     creds=Depends(validate_drive_token),
