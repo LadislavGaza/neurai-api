@@ -4,8 +4,12 @@ from fastapi import (
     APIRouter,
     Depends,
     Response,
-    status
+    status,
+    Form,
+    File,
+    UploadFile,
 )
+from typing import List
 from googleapiclient.discovery import build
 
 from app import utils
@@ -36,22 +40,22 @@ async def load_mri_file(file_id: str, creds=Depends(validate_drive_token)):
 @router.post("/{file_id}/annotations", response_model=s.AnnotationFiles)
 async def upload_annotation(
     file_id: str,
-    annotation: s.AnnotationFilesUpload,
+    name: str | None = Form(),
+    files: List[UploadFile] = File(...),
     user_id: int = Depends(validate_api_token),
     creds=Depends(validate_drive_token),
 ):
     mri = await crud.get_mri_file_by_file_id(mri_file_id=file_id)
     new_file = await utils.file_uploader(
-        files=[annotation.file],
+        files=files,
         creds=creds,
         mri_id=mri.id,
         patient_id=mri.patient.id,
         user_id=user_id,
         scan_type='annotation',
-        name=annotation.name
+        name=name
     )
-
-    return {"id": new_file[0].id}
+    return {"id": new_file[0]['id']}
 
 
 @router.delete(
