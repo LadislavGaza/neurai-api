@@ -1,3 +1,4 @@
+from fastapi import File, UploadFile, Form
 from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime, date
 from typing import List
@@ -90,3 +91,7 @@ class GoogleFile(BaseModel):
 
 class GoogleFiles(BaseModel):
     files: List[GoogleFile]
+
+
+class AnnotationFiles(BaseModel):
+    id: str

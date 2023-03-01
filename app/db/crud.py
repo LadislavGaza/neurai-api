@@ -1,4 +1,4 @@
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import subqueryload
 
@@ -108,6 +108,28 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id:
         await session.commit()
 
 
+async def create_annotation_file(
+        name: str,
+        filename: str,
+        file_id: str,
+        patient_id: str,
+        user_id: int,
+        mri_id: int
+):
+    annotation_file_model = m.Annotation(
+        name=name,
+        filename=filename,
+        file_id=file_id,
+        patient_id=patient_id,
+        mri_file_id=mri_id,
+        created_by=user_id,
+        modified_by=user_id
+    )
+    async with AsyncSession(m.engine) as session:
+        session.add(annotation_file_model)
+        await session.commit()
+
+
 async def create_patient(
     patient: s.NewPatient,
     user_id: int
@@ -123,3 +145,24 @@ async def create_patient(
     async with AsyncSession(m.engine) as session:
         session.add(patient_model)
         await session.commit()
+
+
+async def get_mri_file_by_file_id(mri_file_id: str) -> m.MRIFile:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.MRIFile)
+            .where(m.MRIFile.file_id == mri_file_id)
+            .options(subqueryload(m.MRIFile.patient))
+        )
+        result = await session.execute(query)
+
+    return result.scalars().first()
+
+
+async def delete_annotations_by_file_id(file_id: str):
+    async with AsyncSession(m.engine) as session:
+        query = (
+            delete(m.Annotation)
+            .where(m.Annotation.file_id == file_id)
+        )
+        await session.execute(query)

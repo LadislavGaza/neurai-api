@@ -6,19 +6,15 @@ from fastapi import (
     FastAPI,
     status,
     HTTPException,
-    Depends,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
 
-from app.dependencies import validate_api_token, validate_drive_token
-from app.routes import patient, gdrive, users
+from app.routes import patient, gdrive, users, mri
 from app.static import const
 from app.utils import APIException
-from app import utils
 
 
 log = const.LOGGING()
@@ -76,12 +72,4 @@ async def validation_exception_handler(request, err: HTTPException):
 api.include_router(users.router)
 api.include_router(patient.router)
 api.include_router(gdrive.router)
-
-
-@api.get("/mri/{file_id}", dependencies=[Depends(validate_api_token)])
-async def load_mri_file(file_id: str, creds=Depends(validate_drive_token)):
-    service = build("drive", "v3", credentials=creds)
-    f_e = utils.MRIFile(filename="", content="")
-    f_e.download_decrypted(service, file_id)
-
-    return base64.b64encode(f_e.content)
+api.include_router(mri.router)
