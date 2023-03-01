@@ -10,9 +10,6 @@ import sqlalchemy as sa
 from sqlalchemy import Table, MetaData
 
 from passlib.hash import argon2
-from datetime import datetime
-import string
-import random
 
 
 revision = "c75ee2f000a5"
@@ -63,7 +60,6 @@ def data_upgrades():
     )
 
     users_tbl = Table("users", meta)
-    patients_tbl = Table("patients", meta)
 
     op.bulk_insert(users_tbl, [{
         "id": 1,
@@ -72,28 +68,6 @@ def data_upgrades():
         "password": argon2.hash("Abcdef123")
     }])
 
-    N = 200
-    random.seed(1)
-    patients = [
-        {
-            "id": "".join(
-                random.choices(string.ascii_uppercase + string.digits, k=10)
-            ),
-            "forename": random.choice([
-                "Jozef", "Milan", "Štefan",
-                "Zuzana", "Monika", "Anna"
-            ]),
-            "surname": random.choice([
-                "Kováč", "Molnár", "Lukáč",
-                "Novák", "Polák", "Hudák"
-            ]),
-            "created_by": 1,
-            "created_at": datetime.now().replace(microsecond=0)
-        }
-        for i in range(N)
-    ]
-    op.bulk_insert(patients_tbl, patients)
-
 
 def data_downgrades():
-    op.execute("delete from patients")
+    op.execute("delete from users where id = 1")

@@ -20,7 +20,8 @@ from gzip import compress
 import tempfile
 from pathlib import Path
 
-from random import choice
+from random import choice, choices
+import string
 from string import ascii_lowercase
 
 from app.db import crud
@@ -276,3 +277,7 @@ async def file_uploader(
         )
 
     return new_files
+
+
+def generate_unique_patient_id():
+    return ''.join(choices(string.ascii_uppercase + string.digits, k=10))

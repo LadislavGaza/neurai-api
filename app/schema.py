@@ -1,6 +1,6 @@
 from fastapi import File, UploadFile, Form
 from pydantic import BaseModel, Field, EmailStr
-from datetime import datetime
+from datetime import datetime, date
 from typing import List
 
 
@@ -37,10 +37,18 @@ class PatientSummary(BaseModel):
     id: str = Field(..., title="Patient unique identifier")
     forename: str
     surname: str
+    birth_date: date
     created_at: datetime
 
     class Config:
         orm_mode = True
+
+
+class NewPatient(BaseModel):
+    id: str = Field(..., title="Patient unique identifier")
+    forename: str = Field(..., min_length=1)
+    surname: str = Field(..., min_length=1)
+    birth_date: date = Field(...)
 
 
 class AuthorizationURL(BaseModel):

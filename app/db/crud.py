@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import subqueryload
 
 from typing import Iterable
+from datetime import date
 
 import app.db.model as m
 import app.schema as s
@@ -129,11 +130,15 @@ async def create_annotation_file(
         await session.commit()
 
 
-async def create_patient(id: str, forename: str, surname: str, user_id: int):
+async def create_patient(
+    patient: s.NewPatient,
+    user_id: int
+):
     patient_model = m.Patient(
-        id=id,
-        forename=forename,
-        surname=surname,
+        id=patient.id,
+        forename=patient.forename,
+        surname=patient.surname,
+        birth_date=patient.birth_date,
         created_by=user_id,
         modified_by=user_id,
     )
