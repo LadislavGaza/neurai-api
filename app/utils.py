@@ -200,7 +200,7 @@ def get_mri_files_per_user(user, files, patient_id):
         for file in user.mri_files:
             if file.file_id in drive_file_ids and file.patient.id == patient_id:
                 mri_files.append({
-                    "id": file.file_id,
+                    "id": file.id,
                     "name": file.filename,
                     "created_at": file.created_at,
                     "modified_at": file.modified_at
@@ -257,7 +257,7 @@ async def file_uploader(
         )
 
     if scan_type == 'mri':
-        await crud.create_mri_file(
+        id = await crud.create_mri_file(
             filename=new_file["name"],
             file_id=new_file["id"],
             patient_id=patient_id,
@@ -267,7 +267,7 @@ async def file_uploader(
         if name is None:
             # name to be generated
             pass
-        await crud.create_annotation_file(
+        id = await crud.create_annotation_file(
             name=name,
             filename=new_file["name"],
             file_id=new_file["id"],
@@ -275,7 +275,7 @@ async def file_uploader(
             patient_id=patient_id,
             user_id=user_id,
         )
-
+    new_files[0]['id'] = id
     return new_files
 
 
