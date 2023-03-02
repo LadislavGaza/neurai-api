@@ -106,7 +106,8 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id:
     async with AsyncSession(m.engine) as session:
         session.add(mri_file_model)
         await session.commit()
-
+        await session.refresh(mri_file_model)
+    return mri_file_model.id
 
 async def create_annotation_file(
         name: str,
@@ -128,6 +129,8 @@ async def create_annotation_file(
     async with AsyncSession(m.engine) as session:
         session.add(annotation_file_model)
         await session.commit()
+        await session.refresh(annotation_file_model)
+    return annotation_file_model.id
 
 
 async def create_patient(
@@ -164,6 +167,7 @@ async def get_annotations(mri_id: int) -> Iterable[m.Annotation]:
         query = (
             select(m.Annotation)
             .where(m.Annotation.mri_file_id == mri_id)
+            .order_by(m.Annotation.created_at.desc())
         )
         result = await session.execute(query)
 

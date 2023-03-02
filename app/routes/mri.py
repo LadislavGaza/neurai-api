@@ -60,10 +60,10 @@ async def upload_annotation(
 
 @router.get(
     "/{id}/annotations",
-    dependencies=[Depends(validate_api_token)],
+    dependencies=[Depends(validate_api_token), Depends(validate_drive_token)],
     response_model=List[s.Annotation]
 )
-async def annotations(id: int, creds=Depends(validate_drive_token)):
+async def annotations(id: int):
     return (await crud.get_annotations(id)).all()
 
 

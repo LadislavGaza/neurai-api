@@ -257,7 +257,7 @@ async def file_uploader(
         )
 
     if scan_type == 'mri':
-        await crud.create_mri_file(
+        id = await crud.create_mri_file(
             filename=new_file["name"],
             file_id=new_file["id"],
             patient_id=patient_id,
@@ -267,7 +267,7 @@ async def file_uploader(
         if name is None:
             # name to be generated
             pass
-        await crud.create_annotation_file(
+        id = await crud.create_annotation_file(
             name=name,
             filename=new_file["name"],
             file_id=new_file["id"],
@@ -275,7 +275,7 @@ async def file_uploader(
             patient_id=patient_id,
             user_id=user_id,
         )
-
+    new_files[0]['id'] = id
     return new_files
 
 
