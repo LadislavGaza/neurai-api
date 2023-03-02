@@ -200,7 +200,7 @@ def get_mri_files_per_user(user, files, patient_id):
         for file in user.mri_files:
             if file.file_id in drive_file_ids and file.patient.id == patient_id:
                 mri_files.append({
-                    "id": file.file_id,
+                    "id": file.id,
                     "name": file.filename,
                     "created_at": file.created_at,
                     "modified_at": file.modified_at
