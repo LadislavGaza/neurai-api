@@ -191,3 +191,4 @@ async def delete_annotation(id: int):
             .where(m.Annotation.id == id)
         )
         await session.execute(query)
+        await session.commit()
