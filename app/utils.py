@@ -220,7 +220,7 @@ async def file_uploader(
 ):
     if scan_type == 'annotation':
         try:
-            annotation_id = await crud.create_annotation_file(
+            id = await crud.create_annotation_file(
                 name=name,
                 mri_id=mri_id,
                 patient_id=patient_id,
@@ -280,7 +280,7 @@ async def file_uploader(
         )
     else:
         await crud.update_annotation_file(
-            id=annotation_id,
+            id=id,
             filename=new_file["name"],
             file_id=new_file["id"]
         )
