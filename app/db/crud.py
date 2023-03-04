@@ -106,7 +106,8 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id:
     async with AsyncSession(m.engine) as session:
         session.add(mri_file_model)
         await session.commit()
-
+        await session.refresh(mri_file_model)
+    return mri_file_model.id
 
 async def create_annotation_file(
         name: str,
@@ -139,7 +140,7 @@ async def create_annotation_file(
         session.add(annotation_file_model)
         await session.commit()
         await session.refresh(annotation_file_model)
-        return annotation_file_model.id
+    return annotation_file_model.id
 
 
 async def create_patient(
@@ -159,11 +160,11 @@ async def create_patient(
         await session.commit()
 
 
-async def get_mri_file_by_file_id(mri_file_id: str) -> m.MRIFile:
+async def get_mri_file_by_id(id: int) -> m.MRIFile:
     async with AsyncSession(m.engine) as session:
         query = (
             select(m.MRIFile)
-            .where(m.MRIFile.file_id == mri_file_id)
+            .where(m.MRIFile.id == id)
             .options(subqueryload(m.MRIFile.patient))
         )
         result = await session.execute(query)
@@ -171,13 +172,36 @@ async def get_mri_file_by_file_id(mri_file_id: str) -> m.MRIFile:
     return result.scalars().first()
 
 
-async def delete_annotations_by_file_id(file_id: str):
+async def get_annotations(mri_id: int) -> Iterable[m.Annotation]:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Annotation)
+            .where(m.Annotation.mri_file_id == mri_id)
+            .order_by(m.Annotation.created_at.desc())
+        )
+        result = await session.execute(query)
+
+    return result.scalars()
+
+
+async def get_annotation_by_id(id: int):
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Annotation).where(m.Annotation.id == id)
+        )
+        result = await session.execute(query)
+
+    return result.scalars().first()
+
+
+async def delete_annotation(id: int):
     async with AsyncSession(m.engine) as session:
         query = (
             delete(m.Annotation)
-            .where(m.Annotation.file_id == file_id)
+            .where(m.Annotation.id == id)
         )
         await session.execute(query)
+        await session.commit()
 
 async def update_annotation_file(
         id: int,

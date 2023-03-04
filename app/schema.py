@@ -60,7 +60,7 @@ class AuthorizationCode(BaseModel):
 
 
 class MRIFile(BaseModel):
-    id: str
+    id: int
     name: str
     created_at: datetime
     modified_at: datetime
@@ -95,3 +95,11 @@ class GoogleFiles(BaseModel):
 
 class AnnotationFiles(BaseModel):
     id: str
+
+
+class Annotation(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
