@@ -40,7 +40,7 @@ async def load_mri_file(file_id: str, creds=Depends(validate_drive_token)):
 @router.post("/{file_id}/annotations", response_model=s.AnnotationFiles)
 async def upload_annotation(
     file_id: str,
-    name: str | None = Form(),
+    name: None | str = Form(default=None),
     files: List[UploadFile] = File(...),
     user_id: int = Depends(validate_api_token),
     creds=Depends(validate_drive_token),

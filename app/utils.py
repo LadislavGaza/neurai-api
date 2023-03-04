@@ -1,4 +1,5 @@
 from io import BytesIO
+from sqlalchemy.exc import IntegrityError
 from typing import List
 
 from dicom2nifti.exceptions import ConversionValidationError
@@ -217,6 +218,20 @@ async def file_uploader(
         mri_id,
         name: str
 ):
+    if scan_type == 'annotation':
+        try:
+            annotation_id = await crud.create_annotation_file(
+                name=name,
+                mri_id=mri_id,
+                patient_id=patient_id,
+                user_id=user_id,
+            )
+        except IntegrityError:
+            raise APIException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                content={"message": "Annotation name already exists"},
+            )
+
     service = build("drive", "v3", credentials=creds)
 
     folder_id = get_drive_folder_id(service)
@@ -264,16 +279,10 @@ async def file_uploader(
             user_id=user_id,
         )
     else:
-        if name is None:
-            # name to be generated
-            pass
-        await crud.create_annotation_file(
-            name=name,
+        await crud.update_annotation_file(
+            id=annotation_id,
             filename=new_file["name"],
-            file_id=new_file["id"],
-            mri_id=mri_id,
-            patient_id=patient_id,
-            user_id=user_id,
+            file_id=new_file["id"]
         )
 
     return new_files

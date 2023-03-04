@@ -1,4 +1,4 @@
-from sqlalchemy import select, update, delete
+from sqlalchemy import desc, select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import subqueryload
 
@@ -110,24 +110,36 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id:
 
 async def create_annotation_file(
         name: str,
-        filename: str,
-        file_id: str,
         patient_id: str,
         user_id: int,
         mri_id: int
 ):
-    annotation_file_model = m.Annotation(
-        name=name,
-        filename=filename,
-        file_id=file_id,
-        patient_id=patient_id,
-        mri_file_id=mri_id,
-        created_by=user_id,
-        modified_by=user_id
-    )
     async with AsyncSession(m.engine) as session:
+        if name:
+            annotation_name = name
+        else:
+            query = select(m.Annotation).where(m.Annotation.name.like("maska%")).order_by(desc(m.Annotation.created_at))
+            result = await session.execute(query)
+            annotation = result.scalars().first()
+
+            if annotation:
+                highest_number = int(annotation.name[5:])
+                annotation_name = 'maska' + str(highest_number + 1)
+            else:
+                annotation_name = 'maska1'
+
+        annotation_file_model = m.Annotation(
+            name=annotation_name,
+            patient_id=patient_id,
+            mri_file_id=mri_id,
+            created_by=user_id,
+            modified_by=user_id
+        )
+
         session.add(annotation_file_model)
         await session.commit()
+        await session.refresh(annotation_file_model)
+        return annotation_file_model.id
 
 
 async def create_patient(
@@ -166,3 +178,21 @@ async def delete_annotations_by_file_id(file_id: str):
             .where(m.Annotation.file_id == file_id)
         )
         await session.execute(query)
+
+async def update_annotation_file(
+        id: int,
+        filename: str,
+        file_id: str
+    ):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.Annotation)
+            .where(m.Annotation.id == id)
+            .values({
+                'id' : id, 
+                'filename' : filename,
+                'file_id' : file_id
+            })
+        )
+        await session.execute(stmt)
+        await session.commit()
