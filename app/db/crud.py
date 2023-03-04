@@ -213,9 +213,24 @@ async def update_annotation_file(
             update(m.Annotation)
             .where(m.Annotation.id == id)
             .values({
-                'id' : id, 
                 'filename' : filename,
                 'file_id' : file_id
+            })
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
+async def update_annotation_name(
+        id: int,
+        name: str,
+    ):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.Annotation)
+            .where(m.Annotation.id == id)
+            .values({
+                'name' : name
             })
         )
         await session.execute(stmt)
