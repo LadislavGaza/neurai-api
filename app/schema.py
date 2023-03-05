@@ -26,7 +26,7 @@ class UserProfile(BaseModel):
     email: str
     username: str
     authorized: bool
-    authorized_email: EmailStr
+    authorized_email: EmailStr | None
 
 
 class ChangePassword(BaseModel):
