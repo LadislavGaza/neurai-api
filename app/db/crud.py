@@ -122,6 +122,7 @@ async def create_annotation_file(
         else:
             query = (
                 select(m.Annotation)
+                .where(m.Annotation.mri_file_id == mri_id)
                 .where(m.Annotation.name.like(f'{const.ANNOT_MASK}%'))
                 .order_by(m.Annotation.created_at.desc()))
             result = await session.execute(query)
