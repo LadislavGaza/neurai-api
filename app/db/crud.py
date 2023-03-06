@@ -1,4 +1,4 @@
-from sqlalchemy import desc, select, update, delete
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import subqueryload
 
@@ -7,6 +7,7 @@ from datetime import date
 
 import app.db.model as m
 import app.schema as s
+from app.static import const
 
 
 async def create_user(user: s.UserCredential):
@@ -119,15 +120,18 @@ async def create_annotation_file(
         if name:
             annotation_name = name
         else:
-            query = select(m.Annotation).where(m.Annotation.name.like("maska%")).order_by(desc(m.Annotation.created_at))
+            query = (
+                select(m.Annotation)
+                .where(m.Annotation.name.like(f'{const.ANNOT_MASK}%'))
+                .order_by(m.Annotation.created_at.desc()))
             result = await session.execute(query)
             annotation = result.scalars().first()
 
             if annotation:
-                highest_number = int(annotation.name[5:])
-                annotation_name = 'maska' + str(highest_number + 1)
+                highest_number = int(annotation.name[len(const.ANNOT_MASK):])
+                annotation_name = f'{const.ANNOT_MASK}{str(highest_number + 1)}'
             else:
-                annotation_name = 'maska1'
+                annotation_name = f'{const.ANNOT_MASK}1'
 
         annotation_file_model = m.Annotation(
             name=annotation_name,
@@ -203,11 +207,12 @@ async def delete_annotation(id: int):
         await session.execute(query)
         await session.commit()
 
+
 async def update_annotation_file(
-        id: int,
-        filename: str,
-        file_id: str
-    ):
+    id: int,
+    filename: str,
+    file_id: str
+):
     async with AsyncSession(m.engine) as session:
         stmt = (
             update(m.Annotation)
