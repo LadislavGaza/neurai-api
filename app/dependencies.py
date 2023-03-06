@@ -27,19 +27,26 @@ async def validate_api_token(
         content={"message": "Invalid credentials", "type": "auth"},
     )
     try:
+        # Decode and validate token in one step
         payload = jwt.decode(token, const.JWT.SECRET, "HS256")
         if payload["audience"] != "api":
             raise unauthorized
 
-    except jwt.DecodeError:
+    except jwt.ExpiredSignatureError:
+        # Get username from invalid token for logging
+        payload = jwt.decode(
+            token, const.JWT.SECRET, "HS256",
+            options={"verify_signature": False}
+        )
+        if payload:
+            username = payload.get("username")
+            log.info(
+                f"User '{username}' has timed out.",
+                extra={"topic": "LOGOUT"}
+            )
         raise unauthorized
 
-    except jwt.ExpiredSignatureError:
-        username = payload.get("username")
-        log.info(
-            f"User '{username}' has timed out.",
-            extra={"topic": "LOGOUT"}
-        )
+    except (jwt.InvalidTokenError, jwt.DecodeError):
         raise unauthorized
 
     return payload["user_id"]
@@ -129,4 +136,3 @@ async def validate_drive_token(
             )
 
     return creds
-
