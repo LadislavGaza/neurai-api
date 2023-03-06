@@ -5,7 +5,7 @@ import logging
 
 
 APP_NAME = "NeurAI"
-
+ANNOT_MASK = "maska"
 
 class JWT:
     SECRET = os.environ.get("JWT_SECRET")  # openssl rand -hex 32

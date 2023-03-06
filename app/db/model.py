@@ -3,7 +3,8 @@ from datetime import datetime, date
 
 from sqlalchemy import (
     String,
-    ForeignKey
+    ForeignKey,
+    UniqueConstraint
 )
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import (
@@ -103,11 +104,12 @@ class MRIFile(Base):
 
 class Annotation(Base):
     __tablename__ = 'annotations'
+    __table_args__ = (UniqueConstraint('name', 'mri_file_id'),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
-    filename: Mapped[str]
-    file_id: Mapped[str]
+    filename: Mapped[str] = mapped_column(nullable=True)
+    file_id: Mapped[str] = mapped_column(nullable=True)
     mri_file_id: Mapped[int] = mapped_column(
         ForeignKey("mri_files.id", ondelete="CASCADE")
     )
@@ -136,3 +138,4 @@ class Annotation(Base):
     mri_file = relationship(
         MRIFile, foreign_keys=[mri_file_id], back_populates='annotations'
     )
+

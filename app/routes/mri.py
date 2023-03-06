@@ -9,6 +9,9 @@ from fastapi import (
     File,
     UploadFile,
 )
+from pydantic import Field
+from sqlalchemy.exc import IntegrityError
+
 from typing import List
 from googleapiclient.discovery import build
 
@@ -40,7 +43,7 @@ async def load_mri_file(id: int, creds=Depends(validate_drive_token)):
 @router.post("/{id}/annotations", response_model=s.AnnotationFiles)
 async def upload_annotation(
     id: int,
-    name: str | None = Form(),
+    name: None | str = Form(default=None),
     files: List[UploadFile] = File(...),
     user_id: int = Depends(validate_api_token),
     creds = Depends(validate_drive_token),
@@ -86,4 +89,23 @@ async def remove_annotation(
             content={"message": "File does not exist"},
         )
 
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.patch(
+        "/{mri_id}/annotations/{annotation_id}", 
+        response_model=s.AnnotationFiles, 
+        dependencies=[Depends(validate_api_token)]
+    )
+async def rename_annotation(
+    mri_id: int,
+    annotation_id: int,
+    annotation: s.RenameAnnotation
+):
+    try:
+        annotation_id = await crud.update_annotation_name(annotation_id, annotation.name)
+    except IntegrityError:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": "Annotation name already exists"},
+        )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

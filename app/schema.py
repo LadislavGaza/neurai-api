@@ -103,3 +103,7 @@ class Annotation(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class RenameAnnotation(BaseModel):
+    name: str

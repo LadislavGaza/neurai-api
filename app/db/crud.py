@@ -7,6 +7,7 @@ from datetime import date
 
 import app.db.model as m
 import app.schema as s
+from app.static import const
 
 
 async def create_user(user: s.UserCredential):
@@ -111,22 +112,35 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id:
 
 async def create_annotation_file(
         name: str,
-        filename: str,
-        file_id: str,
         patient_id: str,
         user_id: int,
         mri_id: int
 ):
-    annotation_file_model = m.Annotation(
-        name=name,
-        filename=filename,
-        file_id=file_id,
-        patient_id=patient_id,
-        mri_file_id=mri_id,
-        created_by=user_id,
-        modified_by=user_id
-    )
     async with AsyncSession(m.engine) as session:
+        if name:
+            annotation_name = name
+        else:
+            query = (
+                select(m.Annotation)
+                .where(m.Annotation.name.like(f'{const.ANNOT_MASK}%'))
+                .order_by(m.Annotation.created_at.desc()))
+            result = await session.execute(query)
+            annotation = result.scalars().first()
+
+            if annotation:
+                highest_number = int(annotation.name[len(const.ANNOT_MASK):])
+                annotation_name = f'{const.ANNOT_MASK}{str(highest_number + 1)}'
+            else:
+                annotation_name = f'{const.ANNOT_MASK}1'
+
+        annotation_file_model = m.Annotation(
+            name=annotation_name,
+            patient_id=patient_id,
+            mri_file_id=mri_id,
+            created_by=user_id,
+            modified_by=user_id
+        )
+
         session.add(annotation_file_model)
         await session.commit()
         await session.refresh(annotation_file_model)
@@ -191,4 +205,38 @@ async def delete_annotation(id: int):
             .where(m.Annotation.id == id)
         )
         await session.execute(query)
+        await session.commit()
+
+
+async def update_annotation_file(
+    id: int,
+    filename: str,
+    file_id: str
+):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.Annotation)
+            .where(m.Annotation.id == id)
+            .values({
+                'filename' : filename,
+                'file_id' : file_id
+            })
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
+async def update_annotation_name(
+        id: int,
+        name: str,
+    ):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.Annotation)
+            .where(m.Annotation.id == id)
+            .values({
+                'name' : name
+            })
+        )
+        await session.execute(stmt)
         await session.commit()
