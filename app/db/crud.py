@@ -124,7 +124,7 @@ async def create_annotation_file(
             query = (
                 select(m.Annotation)
                 .where(m.Annotation.mri_file_id == mri_id)
-                .where(m.Annotation.name.like(f'{const.ANNOT_MASK}%'))
+                .where(m.Annotation.name.regexp_match('^maska[0-9]+$'))
                 .order_by(m.Annotation.created_at.desc()))
             result = await session.execute(query)
             annotation = result.scalars().first()
