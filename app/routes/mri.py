@@ -9,7 +9,6 @@ from fastapi import (
     File,
     UploadFile,
 )
-from pydantic import Field
 from sqlalchemy.exc import IntegrityError
 
 from typing import List
@@ -46,7 +45,7 @@ async def upload_annotation(
     name: None | str = Form(default=None),
     files: List[UploadFile] = File(...),
     user_id: int = Depends(validate_api_token),
-    creds = Depends(validate_drive_token),
+    creds=Depends(validate_drive_token)
 ):
     mri = await crud.get_mri_file_by_id(id)
     new_file = await utils.file_uploader(
@@ -55,7 +54,7 @@ async def upload_annotation(
         mri_id=mri.id,
         patient_id=mri.patient.id,
         user_id=user_id,
-        scan_type='annotation',
+        scan_type="annotation",
         name=name
     )
     return {"id": new_file[0]["id"]}
@@ -63,24 +62,37 @@ async def upload_annotation(
 
 @router.get(
     "/{id}/annotations",
-    dependencies=[Depends(validate_api_token), Depends(validate_drive_token)],
     response_model=List[s.Annotation]
 )
-async def annotations(id: int):
-    return (await crud.get_annotations(id)).all()
+async def annotations(
+    id: int,
+    user_id: int = Depends(validate_api_token),
+    creds=Depends(validate_drive_token),
+):
+    service = build("drive", "v3", credentials=creds)
+    folder_id = utils.get_drive_folder_id(service)
+    # get gdrive folder content
+    files = utils.get_drive_folder_content(service, folder_id)
+
+    annotations_list = await crud.get_annotations_by_mri_and_user(id, user_id)
+
+    return utils.get_annotations_per_user(annotations_list, files)
 
 
 @router.delete(
     "/{id}/annotations/{annotation_id}",
-    dependencies=[Depends(validate_api_token)]
 )
 async def remove_annotation(
     annotation_id: int,
-    creds=Depends(validate_drive_token)
+    creds=Depends(validate_drive_token),
+    user_id: int = Depends(validate_api_token),
+
 ):
     service = build("drive", "v3", credentials=creds)
+
+    annotation = await utils.verify_annotaion_creator(annotation_id, user_id)
+
     try:
-        annotation = await crud.get_annotation_by_id(annotation_id)
         await crud.delete_annotation(annotation_id)
         service.files().delete(fileId=annotation.file_id).execute()
     except Exception:
@@ -91,6 +103,7 @@ async def remove_annotation(
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+
 @router.patch(
         "/{mri_id}/annotations/{annotation_id}", 
         response_model=s.AnnotationFiles, 
@@ -99,10 +112,13 @@ async def remove_annotation(
 async def rename_annotation(
     mri_id: int,
     annotation_id: int,
-    annotation: s.RenameAnnotation
+    annotation: s.RenameAnnotation,
+    user_id: int = Depends(validate_api_token),
 ):
+    annot = await utils.verify_annotaion_creator(annotation_id, user_id)
+
     try:
-        annotation_id = await crud.update_annotation_name(annotation_id, annotation.name)
+        await crud.update_annotation_name(annotation_id, annotation.name)
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

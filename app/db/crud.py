@@ -110,6 +110,7 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id:
         await session.refresh(mri_file_model)
     return mri_file_model.id
 
+
 async def create_annotation_file(
         name: str,
         patient_id: str,
@@ -128,7 +129,7 @@ async def create_annotation_file(
             result = await session.execute(query)
             annotation = result.scalars().first()
 
-            if annotation:
+            if annotation and annotation.name[len(const.ANNOT_MASK):]:
                 highest_number = int(annotation.name[len(const.ANNOT_MASK):])
                 annotation_name = f'{const.ANNOT_MASK}{str(highest_number + 1)}'
             else:
@@ -177,19 +178,19 @@ async def get_mri_file_by_id(id: int) -> m.MRIFile:
     return result.scalars().first()
 
 
-async def get_annotations(mri_id: int) -> Iterable[m.Annotation]:
+async def get_annotations_by_mri_and_user(mri_id: int, user_id: int) -> Iterable[m.Annotation]:
     async with AsyncSession(m.engine) as session:
         query = (
             select(m.Annotation)
-            .where(m.Annotation.mri_file_id == mri_id)
+            .where(m.Annotation.mri_file_id == mri_id, m.Annotation.created_by == user_id)
             .order_by(m.Annotation.created_at.desc())
         )
         result = await session.execute(query)
 
-    return result.scalars()
+    return result.scalars().all()
 
 
-async def get_annotation_by_id(id: int):
+async def get_annotation_by_id(id: int) -> m.Annotation:
     async with AsyncSession(m.engine) as session:
         query = (
             select(m.Annotation).where(m.Annotation.id == id)
@@ -219,8 +220,8 @@ async def update_annotation_file(
             update(m.Annotation)
             .where(m.Annotation.id == id)
             .values({
-                'filename' : filename,
-                'file_id' : file_id
+                "filename": filename,
+                "file_id": file_id
             })
         )
         await session.execute(stmt)
@@ -230,13 +231,13 @@ async def update_annotation_file(
 async def update_annotation_name(
         id: int,
         name: str,
-    ):
+):
     async with AsyncSession(m.engine) as session:
         stmt = (
             update(m.Annotation)
             .where(m.Annotation.id == id)
             .values({
-                'name' : name
+                "name": name
             })
         )
         await session.execute(stmt)
