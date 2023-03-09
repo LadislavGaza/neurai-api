@@ -290,3 +290,33 @@ async def file_uploader(
 
 def generate_unique_patient_id():
     return ''.join(choices(string.ascii_uppercase + string.digits, k=10))
+
+
+def get_annotations_per_user(annotations, files):
+    annotation_files = []
+    if annotations:
+        drive_file_ids = [record["id"] for record in files]
+        for file in annotations:
+            if file.file_id in drive_file_ids:
+                annotation_files.append({
+                    "id": file.id,
+                    "name": file.name,
+                    "created_at": file.created_at,
+                    "modified_at": file.modified_at
+                })
+    return annotation_files
+
+
+async def verify_annotaion_creator(annotation_id, user_id):
+    annotation = await crud.get_annotation_by_id(annotation_id)
+    if not annotation:
+        raise APIException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"message": "File doesn't exists"},
+        )
+    if annotation.created_by != user_id:
+        raise APIException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"message": "Activity not allowed for current user"},
+        )
+    return annotation
