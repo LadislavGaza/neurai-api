@@ -3,21 +3,36 @@ services:
   api:
     build:
       context: .
-      dockerfile: config/Dockerfile
+      dockerfile: api/config/Dockerfile
     ports:
       - "8080:8080"
     env_file:
-      - "config/api.env"
+      - "api/config/api.env"
     volumes:
-      - .:/neurai-api
-      - logs:/var/log
+      - ./api:/neurai/api
+      - logs_api:/var/log
     depends_on:
       - "db"
     restart: always
+
+  site_api:
+    build:
+      context: .
+      dockerfile: site_api/config/Dockerfile
+    ports:
+      - "8081:8081"
+    env_file:
+      - "site_api/config/api.env"
+    volumes:
+      - ./site_api:/neurai/site_api
+      - anonymize_db:/neurai/db
+      - logs_site_api:/var/log
+    restart: always
+
   db:
     image: postgres:15
     env_file:
-      - "config/db.env"
+      - "api/config/db.env"
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -26,4 +41,6 @@ services:
 
 volumes:
   pgdata:
-  logs:
+  anonymize_db:
+  logs_api:
+  logs_site_api:

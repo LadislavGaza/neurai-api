@@ -4,11 +4,11 @@ services:
     container_name: neurai_api
     build:
       context: .
-      dockerfile: config/Dockerfile
+      dockerfile: api/config/Dockerfile
     ports:
       - "8080:8080"
     env_file:
-      - "config/api.env"
+      - "api/config/api.env"
     volumes:
       - /var/log/neurai:/var/log/neurai
     depends_on:
@@ -17,11 +17,12 @@ services:
       - be
       - db
     restart: always
+
   db:
     container_name: neurai_db
     image: postgres:15
     env_file:
-      - "config/db.env"
+      - "api/config/db.env"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:

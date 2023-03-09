@@ -5,9 +5,9 @@ from sqlalchemy.orm import subqueryload
 from typing import Iterable
 from datetime import date
 
-import app.db.model as m
-import app.schema as s
-from app.static import const
+import api.db.model as m
+import api.deps.schema as s
+from api.deps import const
 
 
 async def create_user(user: s.UserCredential):

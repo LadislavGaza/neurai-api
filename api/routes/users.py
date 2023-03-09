@@ -11,14 +11,14 @@ from sqlalchemy.exc import IntegrityError
 from passlib.hash import argon2
 from datetime import datetime, timedelta
 
-import app.schema as s
-from app.static import const
-from app.db import crud
-from app.dependencies import (
+import api.deps.schema as s
+from api.deps import const
+from api.db import crud
+from api.deps.auth import (
     validate_reset_token, validate_api_token, get_logger
 )
-from app.services.smtpService import send_reset_email
-from app.utils import APIException
+from api.services.smtp_service import send_reset_email
+from api.deps.utils import APIException
 
 
 router = APIRouter(

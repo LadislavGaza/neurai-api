@@ -7,15 +7,11 @@ from fastapi.security import OAuth2PasswordBearer
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-from app.static import const
-from app.db import crud
-from app.utils import APIException
+from api.db import crud
+from api.deps import const
+from api.deps.utils import APIException, get_logger
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
-
-async def get_logger():
-    return logging.getLogger(const.APP_NAME)
 
 
 async def validate_api_token(

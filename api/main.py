@@ -12,16 +12,16 @@ from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from google.auth.transport.requests import Request
 
-from app.routes import patient, gdrive, users, mri
-from app.static import const
-from app.utils import APIException
+from api.routes import patient, gdrive, users, mri
+from api.deps import const
+from api.deps.utils import APIException
 
 
 log = const.LOGGING()
 dictConfig(log.CONFIG)
 
 
-api = FastAPI(
+app = FastAPI(
     title=const.APP_NAME,
     description="Intelligent neurosurgeon assistant",
     docs_url="/docs",
@@ -32,7 +32,7 @@ api = FastAPI(
     }
 )
 
-api.add_middleware(
+app.add_middleware(
     CORSMiddleware,
     allow_origins=const.CORS.ORIGINS,
     allow_credentials=True,
@@ -42,7 +42,7 @@ api.add_middleware(
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
-@api.exception_handler(APIException)
+@app.exception_handler(APIException)
 async def api_exception_handler(request: Request(), exc: APIException):
     return JSONResponse(
         status_code=exc.status_code,
@@ -50,7 +50,7 @@ async def api_exception_handler(request: Request(), exc: APIException):
     )
 
 
-@api.exception_handler(HTTPException)
+@app.exception_handler(HTTPException)
 async def validation_exception_handler(request, err: HTTPException):
 
     if (
@@ -69,7 +69,7 @@ async def validation_exception_handler(request, err: HTTPException):
         )
 
 
-api.include_router(users.router)
-api.include_router(patient.router)
-api.include_router(gdrive.router)
-api.include_router(mri.router)
+app.include_router(users.router)
+app.include_router(patient.router)
+app.include_router(gdrive.router)
+app.include_router(mri.router)

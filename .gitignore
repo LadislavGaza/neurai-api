@@ -109,11 +109,11 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-config/*.env
-config/gunicorn.conf.py
+*/config/*.env
+*/config/gunicorn.conf.py
 
 #credentials
-config/web_credentials.json
+*/config/web_credentials.json
 
 # Spyder project settings
 .spyderproject

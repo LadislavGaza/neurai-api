@@ -14,11 +14,11 @@ from sqlalchemy.exc import IntegrityError
 from typing import List
 from googleapiclient.discovery import build
 
-from app import utils
-from app import schema as s
-from app.db import crud
-from app.utils import APIException
-from app.dependencies import validate_api_token, validate_drive_token
+import api.deps.schema as s
+from api.db import crud
+from api.deps import utils
+from api.deps.utils import APIException
+from api.deps.auth import validate_api_token, validate_drive_token
 
 
 router = APIRouter(

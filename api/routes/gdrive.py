@@ -4,15 +4,13 @@ import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 
-
-from app import utils
-from app.static import const
-from app.db import crud
-from app.dependencies import (
-    validate_api_token, validate_drive_token, get_logger
+from api.db import crud
+from api.deps import utils, const
+from api.deps.auth import (
+    validate_api_token, validate_drive_token
 )
-import app.schema as s
-from app.utils import APIException
+import api.deps.schema as s
+from api.deps.utils import APIException, get_logger
 
 
 router = APIRouter(

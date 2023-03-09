@@ -8,7 +8,7 @@ DOMAIN = os.environ.get("DOMAIN")
 
 
 def send_reset_email(to, token):
-    with open(os.path.join(os.path.dirname(__file__), "resetPassword.html")) as f:
+    with open(os.path.join(os.path.dirname(__file__), "reset_password.html")) as f:
         template = Template(f.read())
         res = requests.post(
             f"https://api.eu.mailgun.net/v3/{SMTP_DOMAIN}/messages",

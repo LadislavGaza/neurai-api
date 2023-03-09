@@ -17,7 +17,7 @@ class GoogleAPI:
     SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 
     # https://developers.google.com/identity/protocols/oauth2/web-server#creatingcred
-    CREDS_FILE = "config/web_credentials.json"
+    CREDS_FILE = "api/config/web_credentials.json"
     CREDS = json.load(open(CREDS_FILE, "r"))
     REDIRECT_URL = os.environ.get("REDIRECT_URL")
 
