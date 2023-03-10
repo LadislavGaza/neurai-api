@@ -150,13 +150,11 @@ async def create_annotation_file(
 
 
 async def create_patient(
-    patient: s.NewPatient,
+    patient: s.Patient,
     user_id: int
 ):
     patient_model = m.Patient(
         id=patient.id,
-        forename=patient.forename,
-        surname=patient.surname,
         birth_date=patient.birth_date,
         created_by=user_id,
         modified_by=user_id,

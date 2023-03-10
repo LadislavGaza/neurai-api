@@ -7,8 +7,6 @@ RUN apt-get install -y gcc sqlite3 libsqlite3-dev
 
 WORKDIR /neurai
 COPY site_api ./site_api
-RUN mkdir db
-RUN sqlite3 db/neurai.db
 RUN pip install -r site_api/config/requirements.txt
 
 

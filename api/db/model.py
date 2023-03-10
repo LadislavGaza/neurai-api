@@ -49,8 +49,6 @@ class Patient(Base):
     __tablename__ = 'patients'
 
     id: Mapped[str] = mapped_column(String(20), primary_key=True)
-    forename: Mapped[str]
-    surname: Mapped[str]
     birth_date: Mapped[date]
 
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)

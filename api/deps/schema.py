@@ -5,21 +5,21 @@ from typing import List
 
 
 class UserCredential(BaseModel):
-    email: EmailStr = Field(..., title="Email address")
+    email: EmailStr
     username: str
-    password: str = Field(..., title="Plain text password")
+    password: str
 
     class Config:
         orm_mode = True
 
 
 class UserLoginCredentials(BaseModel):
-    email: EmailStr = Field(..., title="Email address")
+    email: EmailStr
     password: str = Field(..., title="Plain text password")
 
 
 class ResetPassword(BaseModel):
-    email: EmailStr = Field(..., title="Email address")
+    email: EmailStr
 
 
 class UserProfile(BaseModel):
@@ -33,22 +33,12 @@ class ChangePassword(BaseModel):
     password: str = Field(..., title="Plain text password")
 
 
-class PatientSummary(BaseModel):
-    id: str = Field(..., title="Patient unique identifier")
-    forename: str
-    surname: str
+class Patient(BaseModel):
+    id: str
     birth_date: date
-    created_at: datetime
 
     class Config:
         orm_mode = True
-
-
-class NewPatient(BaseModel):
-    id: str = Field(..., title="Patient unique identifier")
-    forename: str = Field(..., min_length=1)
-    surname: str = Field(..., min_length=1)
-    birth_date: date = Field(...)
 
 
 class AuthorizationURL(BaseModel):
@@ -71,7 +61,7 @@ class PatientFiles(BaseModel):
 
 
 class PatientFilesPatientDetail(PatientFiles):
-    patient: PatientSummary
+    patient: Patient
 
 
 class Login(BaseModel):

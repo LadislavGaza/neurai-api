@@ -5,10 +5,7 @@ import logging
 
 
 APP_NAME = "NeurAI Hospital API"
-
-
-class JWT:
-    SECRET = os.environ.get("JWT_SECRET")
+COMMON_API_URL = os.environ.get("COMMON_API_URL")
 
 
 class CORS:

@@ -25,8 +25,8 @@ services:
       - "site_api/config/api.env"
     volumes:
       - ./site_api:/neurai/site_api
-      - anonymize_db:/neurai/db
-      - logs_site_api:/var/log
+      - ./site_api/sqlite:/neurai/db:rw
+      - logs_site_api:/var/log/
     restart: always
 
   db:
@@ -41,6 +41,5 @@ services:
 
 volumes:
   pgdata:
-  anonymize_db:
   logs_api:
   logs_site_api:
