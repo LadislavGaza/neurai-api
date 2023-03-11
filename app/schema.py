@@ -66,12 +66,25 @@ class MRIFile(BaseModel):
     modified_at: datetime
 
 
+class Annotation(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
+
+class MRIFileAnnotations(MRIFile):
+    annotation_files: List[Annotation]
+
+
 class PatientFiles(BaseModel):
     mri_files: List[MRIFile]
 
 
-class PatientFilesPatientDetail(PatientFiles):
+class PatientFilesPatientDetail(BaseModel):
     patient: PatientSummary
+    mri_files: List[MRIFileAnnotations]
 
 
 class Login(BaseModel):
@@ -95,14 +108,6 @@ class GoogleFiles(BaseModel):
 
 class AnnotationFiles(BaseModel):
     id: str
-
-
-class Annotation(BaseModel):
-    id: int
-    name: str
-
-    class Config:
-        orm_mode = True
 
 
 class RenameAnnotation(BaseModel):
