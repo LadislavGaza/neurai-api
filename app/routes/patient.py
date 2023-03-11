@@ -63,7 +63,7 @@ async def patient(
     files = utils.get_drive_folder_content(service, folder_id)
 
     user = await crud.get_user_by_id(user_id)
-    mri_files = await utils.get_mri_files_per_user(
+    mri_files = await utils.get_mri_files_and_annotations_per_user(
         user=user, files=files, patient_id=patientID
     )
 
