@@ -200,13 +200,17 @@ async def get_mri_files_and_annotations_per_user(user, files, patient_id):
         drive_file_ids = [record["id"] for record in files]
         for file in user.mri_files:
             if file.file_id in drive_file_ids and file.patient.id == patient_id:
-                annotations = await crud.get_annotations_by_mri_and_user(mri_id = file.id, user_id = user.id)
+                annotations = await crud.get_annotations_by_mri_and_user(
+                    mri_id = file.id, user_id = user.id
+                )
+                # verify annotation presence in drive 
+                annotations = get_annotations_per_user(annotations, files)
                 mri_files.append({
                     "id": file.id,
                     "name": file.filename,
                     "created_at": file.created_at,
                     "modified_at": file.modified_at,
-                    "annotation_files": [{"id": a.id, "name": a.name} for a in annotations]
+                    "annotation_files": [{"id": a["id"], "name": a["name"]} for a in annotations]
                 })
     return mri_files
 
