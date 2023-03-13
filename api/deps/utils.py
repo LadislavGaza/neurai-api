@@ -84,16 +84,12 @@ async def get_mri_files_and_annotations_per_user(user, files, patient_id):
 
             # verify annotation presence in drive 
             annotations = get_annotations_per_user(annotations, files)
-            annotation_files = [
-                {"id": a["id"], "name": a["name"]} 
-                for a in annotations
-            ]
             mri_files.append({
                 "id": file.id,
                 "name": file.filename,
                 "created_at": file.created_at,
                 "modified_at": file.modified_at,
-                "annotation_files": annotation_files
+                "annotation_files": annotations
             })
 
     return mri_files
@@ -187,7 +183,10 @@ def get_annotations_per_user(annotations, files):
     drive_file_ids = [record["id"] for record in files]
     for file in annotations:
         if file.file_id in drive_file_ids:
-            annotation_files.append(file)
+            annotation_files.append({
+                    "id": file.id,
+                    "name": file.name
+                })
     
     return annotation_files
 
