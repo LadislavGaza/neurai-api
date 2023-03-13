@@ -79,6 +79,23 @@ async def annotations(
     return utils.get_annotations_per_user(annotations_list, files)
 
 
+@router.get(
+    "/{id}/annotations/{annotation_id}",
+    dependencies=[Depends(validate_api_token)]
+)
+async def load_annotation(
+    id: int,
+    annotation_id: int,
+    creds=Depends(validate_drive_token),
+):
+    service = build("drive", "v3", credentials=creds)
+    f_e = utils.MRIFile(filename="", content="")
+    annotation = await crud.get_annotation_by_id(annotation_id)
+    f_e.download_decrypted(service, annotation.file_id)
+
+    return base64.b64encode(f_e.content)
+
+
 @router.delete(
     "/{id}/annotations/{annotation_id}",
 )

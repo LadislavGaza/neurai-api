@@ -32,8 +32,30 @@ async def patients_overview():
     dependencies=[Depends(validate_api_token)],
     response_model=s.Patient
 )
-async def patient(patient_id: str):
-    return await crud.get_patient_by_id(patient_id)
+async def patient(
+    patient_id: str,
+    creds=Depends(validate_drive_token),
+    user_id: int = Depends(validate_api_token),
+):
+    service = build("drive", "v3", credentials=creds)
+
+    folder_id = utils.get_drive_folder_id(service)
+
+    # list the folder content
+    files = utils.get_drive_folder_content(service, folder_id)
+
+    user = await crud.get_user_by_id(user_id)
+    mri_files = await utils.get_mri_files_and_annotations_per_user(
+        user=user, files=files, patient_id=patient_id
+    )
+
+    patient = await crud.get_patient_by_id(patient_id)
+    patient_info = {
+        "id": patient.id,
+        "birth_date": patient.birth_date
+    }
+
+    return {"patient": patient_info, "mri_files": mri_files}
 
 
 @router.post("/patients", response_model=s.Patient)
