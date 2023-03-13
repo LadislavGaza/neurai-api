@@ -23,7 +23,11 @@ async def get_patient_by_id(patient_id: str) -> m.Patient:
 
 
 async def create_patient(patient: s.NewPatient):
-    patient_model = m.Patient(**patient)
+    patient_model = m.Patient(
+        id=patient.id,
+        forename=patient.forename,
+        surname=patient.surname
+    )
 
     async with AsyncSession(m.engine) as session:
         session.add(patient_model)

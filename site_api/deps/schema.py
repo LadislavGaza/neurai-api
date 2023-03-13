@@ -3,20 +3,28 @@ from datetime import date, datetime
 from typing import List
 
 
-class Patient(BaseModel):
+class PatientDetail(BaseModel):
     id: str
     forename: str
     surname: str
+
+    class Config:
+        orm_mode = True
+
+
+class PatientAnonymous(BaseModel):
+    id: str
     birth_date: date
 
     class Config:
         orm_mode = True
 
 
-class PatientAnonym(BaseModel):
+class Patient(BaseModel):
     id: str
     forename: str
     surname: str
+    birth_date: date
 
     class Config:
         orm_mode = True
