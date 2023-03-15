@@ -12,14 +12,6 @@ class PatientDetail(BaseModel):
         orm_mode = True
 
 
-class PatientAnonymous(BaseModel):
-    id: str
-    birth_date: date
-
-    class Config:
-        orm_mode = True
-
-
 class Patient(BaseModel):
     id: str
     forename: str
@@ -48,5 +40,18 @@ class PatientFiles(BaseModel):
     mri_files: List[MRIFile]
 
 
-class PatientFilesPatientDetail(PatientFiles):
+class Annotation(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
+
+class MRIFileAnnotations(MRIFile):
+    annotation_files: List[Annotation]
+
+
+class PatientFilesPatientDetail(BaseModel):
     patient: Patient
+    mri_files: List[MRIFileAnnotations]

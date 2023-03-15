@@ -79,6 +79,17 @@ async def get_logger():
     return logging.getLogger(const.APP_NAME)
 
 
+async def get_patient(patient_id):
+    patient = await crud.get_patient_by_id(patient_id)
+    if patient is None:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": "Patient does not exist"},
+        )
+
+    return patient
+
+
 def request_handle_errors(request):
     def wrapper(*args, **kwargs):
         try:
@@ -154,8 +165,7 @@ async def add_patient(
     await crud.create_patient(patient=patient)
 
     response = api_get(f"/patient/{patient.id}", authorization)
-    new_patient = await crud.get_patient_by_id(patient.id)
-    print(new_patient)
+    new_patient = await get_patient(patient.id)
 
     new_patient = (
         response.json() |
@@ -170,7 +180,7 @@ async def patient(
     authorization: str | None = Header(default=None)
 ):
     response = api_get(f"/patient/{patient_id}", authorization)
-    patient = await crud.get_patient_by_id(patient_id)
+    patient = await get_patient(patient_id)
 
     new_patient = (
         response.json() | 
@@ -188,7 +198,7 @@ async def patient_files(
     authorization: str | None = Header(default=None)
 ):
     response = api_get(f"/patient/{patient_id}/files", authorization)
-    patient = await crud.get_patient_by_id(patient_id)
+    patient = await get_patient(patient_id)
     response_files = response.json()
 
     response_files["patient"] = (
