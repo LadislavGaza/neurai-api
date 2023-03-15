@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  api:
+    container_name: neurai_site_api
+    build:
+      context: .
+      dockerfile: site_api/config/Dockerfile
+    ports:
+      - "8081:8081"
+    env_file:
+      - "site_api/config/api.env"
+    volumes:
+      - /var/log/neurai-internal:/var/log/neurai
+      - ./site_api/sqlite:/neurai/db:rw
+    networks:
+      - be
+    restart: always
+
+networks:
+  be:
+    external:
+      name: neurai-be-network

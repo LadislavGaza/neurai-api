@@ -24,25 +24,39 @@ Create python virtual environment in root project directory and install alembic
 ```bash
 virtualenv .venv
 source .venv/bin/activate
-pip install -r config/requirements.txt
-export DB_URL="postgresql+asyncpg://user:password@localhost/db"
-alembic -c config/alembic.ini revision --autogenerate -m "message"
+pip install -r api/config/requirements.txt
+export DB_URL="postgresql+asyncpg://user:password@localhost/neurai"
+alembic -c api/config/alembic.ini revision --autogenerate -m "message"
 ```
+
+In case of site api, its requirements have to be installed and you have to
+change URL to sqlite file (e.g. https://docs.sqlalchemy.org/en/14/core/engines.html#sqlite)
+```bash
+pip install -r site_api/config/requirements.txt
+export DB_URL="sqlite+aiosqlite:///site_api/sqlite/neurai.db"
+alembic -c site_api/config/alembic.ini revision --autogenerate -m "message"
+```
+
 
 #### Run migrations
 
 Execute into container and run alembic. Environment variable should already be set.
 ```bash
 $ docker-compose exec api bash
-(docker)$ alembic -c config/alembic.ini upgrade head
+(docker)$ alembic -c api/config/alembic.ini upgrade head
 ```
 
 https://alembic.sqlalchemy.org/en/latest/cookbook.html
 In order to seed test data to database run next command instead. if you already updated schema
 to newest version you have to downgrade in order to force data seeding
 ```bash
-(docker)$ alembic -c config/alembic.ini downgrade base
-(docker)$ alembic -c config/alembic.ini -x data=true upgrade head
+(docker)$ alembic -c api/config/alembic.ini downgrade base
+(docker)$ alembic -c api/config/alembic.ini -x data=true upgrade head
+```
+
+To recreate sqlite databse run this command in sqlite folder:
+```
+sqlite3 neurai.db ""
 ```
 
 Encryption key and sigma is generated and set as environment variable 
@@ -58,10 +72,4 @@ sig = base64.b64encode(b_sig)
 
 print('key: ', key.decode())
 print('sig: ', sig.decode())
-```
-
-In order to add username to users table you need to  run next commands.
-```bash
-(docker)$ alembic -c config/alembic.ini downgrade -5
-(docker)$ alembic -c config/alembic.ini -x data=true upgrade head
 ```

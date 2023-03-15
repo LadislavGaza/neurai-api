@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   api:
+    container_name: neurai_api
     build:
       context: .
       dockerfile: api/config/Dockerfile
@@ -9,37 +10,36 @@ services:
     env_file:
       - "api/config/api.env"
     volumes:
-      - ./api:/neurai/api
-      - logs_api:/var/log
+      - /var/log/neurai:/var/log/neurai
     depends_on:
       - "db"
-    restart: always
-
-  site_api:
-    build:
-      context: .
-      dockerfile: site_api/config/Dockerfile
-    ports:
-      - "8081:8081"
-    env_file:
-      - "site_api/config/api.env"
-    volumes:
-      - ./site_api:/neurai/site_api
-      - ./site_api/sqlite:/neurai/db:rw
-      - logs_site_api:/var/log/
+    networks:
+      - be
+      - db
     restart: always
 
   db:
+    container_name: neurai_db
     image: postgres:15
     env_file:
       - "api/config/db.env"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - db
     ports:
       - "5432:5432"
     restart: always
 
 volumes:
   pgdata:
-  logs_api:
-  logs_site_api:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/mnt/postgres'
+
+networks:
+  be:
+    name: neurai-be-network
+  db:
