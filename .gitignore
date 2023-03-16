@@ -115,6 +115,9 @@ venv.bak/
 #credentials
 */config/web_credentials.json
 
+# sqlite
+site_api/sqlite/*
+
 # Spyder project settings
 .spyderproject
 .spyproject
