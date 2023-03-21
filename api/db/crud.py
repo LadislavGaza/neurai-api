@@ -240,3 +240,17 @@ async def update_annotation_name(
         )
         await session.execute(stmt)
         await session.commit()
+
+
+async def create_screening(name: str, patient_id: str, user_id: int):
+    screening_model = m.Screening(
+        name=name,
+        patient_id=patient_id,
+        created_by=user_id,
+        modified_by=user_id,
+    )
+    async with AsyncSession(m.engine) as session:
+        session.add(screening_model)
+        await session.commit()
+        await session.refresh(screening_model)
+    return screening_model.id

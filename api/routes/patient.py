@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, File, UploadFile, status, Form
 from googleapiclient.discovery import build
 
 from typing import List
@@ -134,3 +136,30 @@ async def upload_mri(
 
     return {"mri_files": new_files}
 
+
+@router.post(
+    "/patient/{patient_id}/screening",
+    response_model=s.CreateScreening
+)
+async def create_screening(
+    patient_id: str,
+    screening: s.Screening,
+    user_id: int = Depends(validate_api_token),
+):
+    # default name for screening is actual date
+    if not screening.name:
+        screening.name = datetime.now().strftime('%d-%m-%Y')
+
+    try:
+        screening_id = await crud.create_screening(
+            name=screening.name,
+            patient_id=patient_id,
+            user_id=user_id
+        )
+    except IntegrityError:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": "Screening name already exists"},
+        )
+
+    return {"id": screening_id}

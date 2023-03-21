@@ -102,3 +102,11 @@ class GoogleFile(BaseModel):
 
 class GoogleFiles(BaseModel):
     files: List[GoogleFile]
+
+
+class CreateScreening(BaseModel):
+    id: int
+
+
+class Screening(BaseModel):
+    name: str | None
