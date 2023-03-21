@@ -79,7 +79,7 @@ class Screening(Base):
     __table_args__ = (UniqueConstraint('name', 'patient_id'),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str]
     patient_id: Mapped[str] = mapped_column(
         String(20), ForeignKey("patients.id")
     )
