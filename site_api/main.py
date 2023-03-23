@@ -189,6 +189,7 @@ async def patient(
     return new_patient
 
 
+# TO BE DELETED
 @app.get(
     "/patient/{patient_id}/files",
     response_model=s.PatientFilesPatientDetail

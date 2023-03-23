@@ -80,8 +80,13 @@ class PatientFiles(BaseModel):
     mri_files: List[MRIFile]
 
 
+# TO BE DELETED
 class PatientFilesPatientDetail(BaseModel):
     patient: Patient
+    mri_files: List[MRIFileAnnotations]
+
+
+class ScreeningFiles(BaseModel):
     mri_files: List[MRIFileAnnotations]
 
 

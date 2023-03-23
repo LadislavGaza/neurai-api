@@ -83,6 +83,7 @@ async def patient(
     return patient
 
 
+# TO BE DELETED
 @router.get(
     "/patient/{patient_id}/files",
     response_model=s.PatientFilesPatientDetail
@@ -141,6 +142,37 @@ async def patient_screenings(
     }
 
 
+@router.get(
+    "/screening/{screening_id}/files",
+    response_model=s.ScreeningFiles
+)
+async def screening_files(
+    screening_id: int,
+    creds=Depends(validate_drive_token),
+    user_id: int = Depends(validate_api_token),
+):
+    screening = await crud.get_screening_by_id_and_user(screening_id, user_id)
+    if screening is None:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": "Screening does not exist"},
+        )
+
+    service = build("drive", "v3", credentials=creds)
+    folder_id = utils.get_drive_folder_id(service)
+    # list the folder content
+    files = utils.get_drive_folder_content(service, folder_id)
+
+    user = await crud.get_user_by_id(user_id)
+    mri_files = await utils.get_mri_files_and_annotations_per_screening(
+        user=user, files=files, screening_id=screening_id
+    )
+    return {
+        "mri_files": mri_files
+    }
+
+
+# TO BE DELETED
 @router.post(
     "/patient/{patient_id}/files",
     response_model=s.PatientFiles

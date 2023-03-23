@@ -268,3 +268,16 @@ async def get_screenings_by_patient_and_user(patient_id: int, user_id: int) -> I
         )
         result = await session.execute(query)
     return result.scalars().all()
+
+
+async def get_screening_by_id_and_user(screening_id: int, user_id: int) -> m.Screening:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Screening).where(
+                m.Screening.id == screening_id,
+                m.Screening.created_by == user_id
+            )
+        )
+        result = await session.execute(query)
+
+    return result.scalars().first()
