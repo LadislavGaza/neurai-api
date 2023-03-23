@@ -126,7 +126,8 @@ async def file_uploader(
         user_id: int,
         scan_type: str,
         mri_id,
-        name: str
+        name: str,
+        screening_id: int | None
 ):
     if scan_type == 'annotation':
         try:
@@ -186,6 +187,7 @@ async def file_uploader(
             filename=new_file["name"],
             file_id=new_file["id"],
             patient_id=patient_id,
+            screening_id=screening_id,
             user_id=user_id,
         )
     else:

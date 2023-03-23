@@ -222,3 +222,33 @@ async def create_screening(
         )
 
     return {"id": screening_id}
+
+
+@router.post(
+    "/screening/{screening_id}/files",
+    response_model=s.PatientFiles
+)
+async def upload_mri(
+    screening_id: int,
+    user_id: int = Depends(validate_api_token),
+    creds=Depends(validate_drive_token),
+    files: List[UploadFile] = File(...),
+):
+    screening = await crud.get_screening_by_id_and_user(screening_id, user_id)
+    if screening is None:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": "Screening does not exist"},
+        )
+    new_files = await utils.file_uploader(
+        files=files,
+        creds=creds,
+        patient_id=screening.patient_id,
+        user_id=user_id,
+        scan_type='mri',
+        mri_id=None,
+        name="",
+        screening_id=screening_id
+    )
+
+    return {"mri_files": new_files}
