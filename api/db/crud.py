@@ -254,3 +254,17 @@ async def create_screening(name: str, patient_id: str, user_id: int):
         await session.commit()
         await session.refresh(screening_model)
     return screening_model.id
+
+
+async def get_screenings_by_patient_and_user(patient_id: int, user_id: int) -> Iterable[m.Screening]:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Screening)
+            .where(
+                m.Screening.patient_id == patient_id,
+                m.Screening.created_by == user_id
+            )
+            .order_by(m.Screening.created_at.desc())
+        )
+        result = await session.execute(query)
+    return result.scalars().all()

@@ -206,3 +206,22 @@ async def patient_files(
         s.PatientDetail.from_orm(patient).dict()
     )
     return response_files
+
+
+@app.get(
+    "/patient/{patient_id}/screening",
+    response_model=s.PatientDetailScreenings
+)
+async def patient_screenings(
+    patient_id: str,
+    authorization: str | None = Header(default=None)
+):
+    response = api_get(f"/patient/{patient_id}/screening", authorization)
+    patient = await get_patient(patient_id)
+    response_files = response.json()
+
+    response_files["patient"] = (
+        response_files.get("patient", []) | 
+        s.PatientDetail.from_orm(patient).dict()
+    )
+    return response_files

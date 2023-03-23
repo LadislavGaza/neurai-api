@@ -114,6 +114,33 @@ async def patient_files(
     }
 
 
+@router.get(
+    "/patient/{patient_id}/screening",
+    response_model=s.PatientDetailScreenings
+)
+async def patient_screenings(
+    patient_id: str,
+    creds=Depends(validate_drive_token),
+    user_id: int = Depends(validate_api_token),
+):
+    patient = await crud.get_patient_by_id(patient_id)
+    if patient is None:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": "Patient does not exist"},
+        )
+
+    screenings = await crud.get_screenings_by_patient_and_user(
+        patient_id=patient_id,
+        user_id=user_id
+    )
+
+    return {
+        "patient": patient,
+        "screenings": screenings
+    }
+
+
 @router.post(
     "/patient/{patient_id}/files",
     response_model=s.PatientFiles

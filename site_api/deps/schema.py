@@ -55,3 +55,13 @@ class MRIFileAnnotations(MRIFile):
 class PatientFilesPatientDetail(BaseModel):
     patient: Patient
     mri_files: List[MRIFileAnnotations]
+
+
+class ScreeningInfo(BaseModel):
+    id: int
+    name: str
+
+
+class PatientDetailScreenings(BaseModel):
+    patient: Patient
+    screenings: List[ScreeningInfo]

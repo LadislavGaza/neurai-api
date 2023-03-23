@@ -110,3 +110,16 @@ class CreateScreening(BaseModel):
 
 class Screening(BaseModel):
     name: str | None
+
+
+class ScreeningInfo(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
+
+class PatientDetailScreenings(BaseModel):
+    patient: Patient
+    screenings: List[ScreeningInfo]
