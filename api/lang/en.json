@@ -1,0 +1,9 @@
+{
+  "wrong_login": "Wrong login or password",
+  "reset_password": "Password reset email sent successfully",
+  "invalid_password": "Password invalid format",
+  "username_missing": "Username field is missing",
+  "username_taken": "User with this name already exists",
+  "user_missing": "User not found",
+  "password_changed": "Password changed successfully"
+}

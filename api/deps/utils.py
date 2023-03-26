@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy.exc import IntegrityError
 from typing import List
 
@@ -8,18 +10,9 @@ from googleapiclient.errors import HttpError
 
 from nibabel.spatialimages import HeaderDataError
 from nibabel.wrapstruct import WrapStructError
-from pydicom import dcmread
-from pydicom.errors import InvalidDicomError
-import dicom2nifti
-
-from buffered_encryption.aesctr import EncryptionIterator, ReadOnlyEncryptedFile
-
-from gzip import compress
-import tempfile
-from pathlib import Path
 
 import logging
-from random import choice, choices
+from random import  choices
 import string
 
 from api.db import crud
@@ -27,6 +20,8 @@ from api.deps import const
 from api.deps.mri_file import MRIFile
 
 from fastapi import status, UploadFile
+
+import api.main as main
 
 
 class APIException(Exception):
@@ -209,3 +204,15 @@ async def verify_annotaion_creator(annotation_id, user_id):
 async def get_logger():
     return logging.getLogger(const.APP_NAME)
 
+
+def get_localization_data(accepted_language):
+    translation = None
+    if not accepted_language or accepted_language not in main.app_languages:
+        accepted_language = main.language_fallback
+
+    if accepted_language == "en":
+        translation = open("api/lang/en.json", "r")
+    elif accepted_language == "sk":
+        translation = open("api/lang/sk.json", "r")
+
+    return json.load(translation)

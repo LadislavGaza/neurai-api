@@ -40,6 +40,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+language_fallback = "sk"
+app_languages = ["sk", "en"]
 
 
 @app.exception_handler(APIException)

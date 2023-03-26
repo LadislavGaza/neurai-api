@@ -1,0 +1,10 @@
+{
+  "wrong_login": "Nesprávne prihlasovacie údaje",
+  "reset_password": "Email na obnovenie hesla bol odoslaný",
+  "invalid_password": "Nesprávny formát hesla",
+  "username_missing": "Použivateľské meno chýba",
+  "username_taken": "Použivateľ s týmto menom už existuje",
+  "user_missing": "Použivateľ neexistuje",
+  "password_changed": "Heslo bolo zmenené"
+
+}
