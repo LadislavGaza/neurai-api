@@ -9,18 +9,19 @@ from googleapiclient.discovery import build
 
 from api.db import crud
 from api.deps import const
-from api.deps.utils import APIException, get_logger
+from api.deps.utils import APIException, get_logger, get_localization_data
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 async def validate_api_token(
     token: str = Depends(oauth2_scheme),
-    log = Depends(get_logger)
+    translation=Depends(get_localization_data),
+    log=Depends(get_logger)
 ):
     unauthorized = APIException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        content={"message": "Invalid credentials", "type": "auth"},
+        content={"message": translation["wrong_login"], "type": "auth"},
     )
     try:
         # Decode and validate token in one step
@@ -48,10 +49,10 @@ async def validate_api_token(
     return payload["user_id"]
 
 
-async def validate_reset_token(token: str = Depends(oauth2_scheme)):
+async def validate_reset_token(token: str = Depends(oauth2_scheme), translation=Depends(get_localization_data)):
     unauthorized = APIException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        content={"message": "Invalid credentials", "type": "auth"},
+        content={"message": translation["wrong_login"], "type": "auth"},
     )
     try:
         payload = jwt.decode(token, const.JWT.SECRET, "HS256")
@@ -66,7 +67,8 @@ async def validate_reset_token(token: str = Depends(oauth2_scheme)):
 
 async def validate_drive_token(
     user_id: int = Depends(validate_api_token),
-    log = Depends(get_logger)
+    log=Depends(get_logger),
+    translation=Depends(get_localization_data)
 ):
     creds = None
     token = None
@@ -104,10 +106,10 @@ async def validate_drive_token(
         )
         raise APIException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"message": "Google drive authorization failed", "type": "google"},
+            content={"message": translation["drive_authorization_failed"], "type": "google"},
         )
 
-    # if the NeurAI file doesn't exists create one
+    # if the NeurAI file doesn't exist create one
     if not items:
         folder_metadata = {
             "name": const.APP_NAME,
@@ -128,7 +130,7 @@ async def validate_drive_token(
         if not items:
             raise APIException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                content={"message": "Folder NeurAI not found"},
+                content={"message": translation["drive_folder_not_found"]},
             )
 
     return creds

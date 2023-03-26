@@ -12,14 +12,14 @@ from nibabel.spatialimages import HeaderDataError
 from nibabel.wrapstruct import WrapStructError
 
 import logging
-from random import  choices
+from random import choices
 import string
 
 from api.db import crud
 from api.deps import const
 from api.deps.mri_file import MRIFile
 
-from fastapi import status, UploadFile
+from fastapi import status, UploadFile, Request
 
 import api.main as main
 
@@ -33,7 +33,7 @@ class APIException(Exception):
         self.status_code = status_code
 
 
-def get_drive_folder_id(service):
+def get_drive_folder_id(service, translation):
     # get folder_id for NeurAI folder
     results = service.files().list(
         q=const.GoogleAPI.CONTENT_FILTER,
@@ -41,11 +41,11 @@ def get_drive_folder_id(service):
     ).execute()
     items = results.get("files", [])
 
-    # if NeurAI folder doesn"t exist we need to retry authorization
+    # if NeurAI folder doesn't exist we need to retry authorization
     if not items:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": "Folder NeurAI not found"},
+            content={"message": translation["drive_folder_not_found"]},
         )
 
     return items[0]["id"]
@@ -74,7 +74,7 @@ async def get_mri_files_and_annotations_per_user(user, files, patient_id):
     for file in user.mri_files:
         if file.file_id in drive_file_ids and file.patient.id == patient_id:
             annotations = await crud.get_annotations_by_mri_and_user(
-                mri_id = file.id, user_id = user.id
+                mri_id=file.id, user_id=user.id
             )
 
             # verify annotation presence in drive 
@@ -97,7 +97,8 @@ async def file_uploader(
         user_id: int,
         scan_type: str,
         mri_id,
-        name: str
+        name: str,
+        translation
 ):
     if scan_type == 'annotation':
         try:
@@ -110,12 +111,12 @@ async def file_uploader(
         except IntegrityError:
             raise APIException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                content={"message": "Annotation name already exists"},
+                content={"message": translation["annotation_name_exists"]},
             )
 
     service = build("drive", "v3", credentials=creds)
 
-    folder_id = get_drive_folder_id(service)
+    folder_id = get_drive_folder_id(service, translation)
     new_files = []
     dicom_files = []
     nifti_file = None
@@ -124,7 +125,10 @@ async def file_uploader(
             file = MRIFile(filename=input_file.filename, content=input_file.file)
 
             nifti_file, dicom_files = file.create_valid_series(
-                files_length=len(files), nifti_file=nifti_file, dicom_files=dicom_files
+                files_length=len(files),
+                nifti_file=nifti_file,
+                dicom_files=dicom_files,
+                translation=translation
             )
 
         upload_file = MRIFile(filename="", content=None)
@@ -138,7 +142,7 @@ async def file_uploader(
         # For Dicom: not enough slices (<4) or inconsistent slice increment
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"message": "File(s) must be valid dicom or nifti format"},
+            content={"message": translation["mri_files_invalid"]},
         )
     except APIException as excep:
         raise excep
@@ -149,7 +153,7 @@ async def file_uploader(
 
         raise APIException(
             status_code=status_code,
-            content={"message": "Google Drive upload failed"},
+            content={"message": translation["drive_upload_failed"]},
         )
 
     if scan_type == 'mri':
@@ -186,17 +190,17 @@ def get_annotations_per_user(annotations, files):
     return annotation_files
 
 
-async def verify_annotaion_creator(annotation_id, user_id):
+async def verify_annotaion_creator(annotation_id, user_id, translation):
     annotation = await crud.get_annotation_by_id(annotation_id)
     if not annotation:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"message": "File doesn't exists"},
+            content={"message": translation["file_not_found"]},
         )
     if annotation.created_by != user_id:
         raise APIException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"message": "Activity not allowed for current user"},
+            content={"message": translation["activity_not_allowed"]},
         )
     return annotation
 
@@ -205,7 +209,9 @@ async def get_logger():
     return logging.getLogger(const.APP_NAME)
 
 
-def get_localization_data(accepted_language):
+def get_localization_data(request: Request):
+    accepted_language = request.headers.get("Accept-Language")
+    print('language', accepted_language)
     translation = None
     if not accepted_language or accepted_language not in main.app_languages:
         accepted_language = main.language_fallback

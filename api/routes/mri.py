@@ -7,7 +7,7 @@ from fastapi import (
     status,
     Form,
     File,
-    UploadFile,
+    UploadFile, Header,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -17,7 +17,7 @@ from googleapiclient.discovery import build
 import api.deps.schema as s
 from api.db import crud
 from api.deps import utils
-from api.deps.utils import APIException
+from api.deps.utils import APIException, get_localization_data
 from api.deps.auth import validate_api_token, validate_drive_token
 
 
@@ -45,7 +45,8 @@ async def upload_annotation(
     name: None | str = Form(default=None),
     files: List[UploadFile] = File(...),
     user_id: int = Depends(validate_api_token),
-    creds=Depends(validate_drive_token)
+    creds=Depends(validate_drive_token),
+    translation=Depends(get_localization_data)
 ):
     mri = await crud.get_mri_file_by_id(id)
     new_file = await utils.file_uploader(
@@ -55,7 +56,8 @@ async def upload_annotation(
         patient_id=mri.patient.id,
         user_id=user_id,
         scan_type="annotation",
-        name=name
+        name=name,
+        translation=translation
     )
     return {"id": new_file[0]["id"]}
 
@@ -68,9 +70,10 @@ async def annotations(
     id: int,
     user_id: int = Depends(validate_api_token),
     creds=Depends(validate_drive_token),
+    translation=Depends(get_localization_data)
 ):
     service = build("drive", "v3", credentials=creds)
-    folder_id = utils.get_drive_folder_id(service)
+    folder_id = utils.get_drive_folder_id(service, translation)
     # get gdrive folder content
     files = utils.get_drive_folder_content(service, folder_id)
 
@@ -103,11 +106,11 @@ async def remove_annotation(
     annotation_id: int,
     creds=Depends(validate_drive_token),
     user_id: int = Depends(validate_api_token),
-
+    translation=Depends(get_localization_data)
 ):
     service = build("drive", "v3", credentials=creds)
 
-    annotation = await utils.verify_annotaion_creator(annotation_id, user_id)
+    annotation = await utils.verify_annotaion_creator(annotation_id, user_id, translation)
 
     try:
         await crud.delete_annotation(annotation_id)
@@ -115,7 +118,7 @@ async def remove_annotation(
     except Exception:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "File does not exist"},
+            content={"message": translation["file_not_found"]}
         )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -131,14 +134,15 @@ async def rename_annotation(
     annotation_id: int,
     annotation: s.RenameAnnotation,
     user_id: int = Depends(validate_api_token),
+    translation=Depends(get_localization_data)
 ):
-    annot = await utils.verify_annotaion_creator(annotation_id, user_id)
+    annot = await utils.verify_annotaion_creator(annotation_id, user_id, translation)
 
     try:
         await crud.update_annotation_name(annotation_id, annotation.name)
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Annotation name already exists"},
+            content={"message": translation["annotation_name_exists"]},
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

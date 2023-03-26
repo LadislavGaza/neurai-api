@@ -4,8 +4,7 @@ from fastapi import (
     APIRouter,
     status,
     Response,
-    Depends,
-    Header
+    Depends
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -32,10 +31,8 @@ router = APIRouter(
 async def registration(
         user: s.UserCredential,
         log=Depends(get_logger),
-        Accept_Language: str = Header(convert_underscores=True)
+        translation=Depends(get_localization_data)
 ):
-    translation = get_localization_data(Accept_Language)
-
     if (
         len(user.password) < 8
         or user.password.lower() == user.password
@@ -73,9 +70,9 @@ async def registration(
 async def login(
         user: s.UserLoginCredentials,
         log=Depends(get_logger),
-        Accept_Language: str = Header(convert_underscores=True)
+        translation=Depends(get_localization_data)
+
 ):
-    translation = get_localization_data(Accept_Language)
     account = await crud.get_user(user)
 
     valid_credentials = account is not None and argon2.verify(
@@ -128,10 +125,8 @@ async def login(
 async def reset_password(
         user: s.ResetPassword,
         log=Depends(get_logger),
-        Accept_Language: str = Header(convert_underscores=True)
+        translation=Depends(get_localization_data)
 ):
-    translation = get_localization_data(Accept_Language)
-
     expiration = (
         datetime.utcnow() +
         timedelta(seconds=const.JWT.EXPIRATION_PASSWORD_RESET)
@@ -158,9 +153,8 @@ async def change_password(
     data: s.ChangePassword,
     email: str = Depends(validate_reset_token),
     log=Depends(get_logger),
-    Accept_Language: str = Header(convert_underscores=True)
+    translation=Depends(get_localization_data)
 ):
-    translation = get_localization_data(Accept_Language)
     user = await crud.get_user_by_mail(email)
     if not user:
         raise APIException(

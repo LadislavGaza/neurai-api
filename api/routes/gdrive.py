@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, Response
+from fastapi import APIRouter, Depends, status, Response, Header
 
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
@@ -10,8 +10,7 @@ from api.deps.auth import (
     validate_api_token, validate_drive_token
 )
 import api.deps.schema as s
-from api.deps.utils import APIException, get_logger
-
+from api.deps.utils import APIException, get_logger, get_localization_data
 
 router = APIRouter(
     prefix="/google",
@@ -43,8 +42,10 @@ async def drive_authorize_code(
     code: str,
     state: str,
     user_id=Depends(validate_api_token),
-    log = Depends(get_logger)
+    log=Depends(get_logger),
+    translation=Depends(get_localization_data)
 ):
+
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         const.GoogleAPI.CREDS_FILE,
         const.GoogleAPI.SCOPES,
@@ -60,7 +61,7 @@ async def drive_authorize_code(
     except Exception:
         raise APIException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"message": "Google drive authorization failed", "type": "google"},
+            content={"message": translation["drive_authorization_failed"], "type": "google"},
         )
 
     await crud.update_user_refresh_token(
@@ -80,17 +81,18 @@ async def drive_authorize_code(
         extra={"topic": "GOOGLE"}
     )
 
-    return {"message": "Google authorization successful"}
+    return {"message": translation["drive_authorization_success"]}
 
 
 @router.get("/files", response_model=s.GoogleFiles)
 async def drive_get_files(
     creds=Depends(validate_drive_token),
     user_id: int = Depends(validate_api_token),
+    translation=Depends(get_localization_data)
 ):
     service = build("drive", "v3", credentials=creds)
 
-    folder_id = utils.get_drive_folder_id(service)
+    folder_id = utils.get_drive_folder_id(service, translation)
     q = f"'{folder_id}' in parents and trashed=false"
 
     # list the folder content
@@ -128,7 +130,7 @@ async def drive_get_files(
 @router.delete("/remove")
 async def drive_remove_authorization(
     user_id: int = Depends(validate_api_token),
-    log = Depends(get_logger)
+    log=Depends(get_logger)
 ):
     await crud.update_user_refresh_token(user_id=user_id, refresh_token=None)
     await crud.update_user_associated_drive(user_id=user_id, email=None)

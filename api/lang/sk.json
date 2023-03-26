@@ -5,6 +5,16 @@
   "username_missing": "Použivateľské meno chýba",
   "username_taken": "Použivateľ s týmto menom už existuje",
   "user_missing": "Použivateľ neexistuje",
-  "password_changed": "Heslo bolo zmenené"
-
+  "password_changed": "Heslo bolo úspešne zmenené",
+  "drive_authorization_failed": "Google drive autorizácia zlyhala",
+  "drive_authorization_success": "Google drive autorizácia bola úspešná",
+  "file_not_found": "Súbor nebol nájdený",
+  "annotation_name_exists": "Anotácia s týmto názvom už existuje",
+  "patient_id_exists": "Pacient s týmto ID už existuje",
+  "patient_not_exists": "Pacient neexistuje",
+  "drive_folder_not_found": "Priečinok NeurAI nebol nájdený",
+  "mri_files_invalid": "Súbor(y) musia mať platný dicom alebo nifti formát",
+  "drive_upload_failed": "Nahrávanie na google drive zlyhalo",
+  "activity_not_allowed": "Táto aktivita nie je povolená pre prihláseného použivateľa",
+  "more_than_one_scanning_uploaded": "Bolo nahratých viac ako jedno snimkovanie"
 }

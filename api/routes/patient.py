@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, UploadFile, status, Header
 from googleapiclient.discovery import build
 
 from typing import List
@@ -7,7 +7,7 @@ from api.db import crud
 from api.deps import utils
 import api.deps.schema as s
 from api.deps.auth import validate_api_token, validate_drive_token
-from api.deps.utils import APIException
+from api.deps.utils import APIException, get_localization_data
 
 from sqlalchemy.exc import IntegrityError
 
@@ -30,7 +30,8 @@ async def patients_overview():
 @router.post("/patients", response_model=s.Patient)
 async def add_patient(
     patient: s.Patient,
-    user_id: int = Depends(validate_api_token)
+    user_id: int = Depends(validate_api_token),
+    translation=Depends(get_localization_data)
 ):
     if not patient.id:
         patient_exists = True
@@ -55,7 +56,7 @@ async def add_patient(
         except IntegrityError:
             raise APIException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                content={"message": "Patient with this ID already exists"},
+                content={"message": translation["patient_id_exists"]}
             )
 
     new_patient = await crud.get_patient_by_id(patient.id)
@@ -69,13 +70,14 @@ async def add_patient(
 )
 async def patient(
     patient_id: str,
-    user_id: int = Depends(validate_api_token)
+    user_id: int = Depends(validate_api_token),
+    translation=Depends(get_localization_data)
 ):
     patient = await crud.get_patient_by_id(patient_id)
     if patient is None:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": "Patient does not exist"},
+            content={"message": translation["patient_not_exist"]}
         )
 
     return patient
@@ -89,16 +91,17 @@ async def patient_files(
     patient_id: str,
     creds=Depends(validate_drive_token),
     user_id: int = Depends(validate_api_token),
+    translation=Depends(get_localization_data)
 ):
     patient = await crud.get_patient_by_id(patient_id)
     if patient is None:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": "Patient does not exist"},
+            content={"message": translation["patient_not_exist"]},
         )
 
     service = build("drive", "v3", credentials=creds)
-    folder_id = utils.get_drive_folder_id(service)
+    folder_id = utils.get_drive_folder_id(service, translation)
     # list the folder content
     files = utils.get_drive_folder_content(service, folder_id)
 
@@ -133,4 +136,3 @@ async def upload_mri(
     )
 
     return {"mri_files": new_files}
-
