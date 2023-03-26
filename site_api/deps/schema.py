@@ -36,11 +36,6 @@ class MRIFile(BaseModel):
     modified_at: datetime
 
 
-# TO BE DELETED
-class PatientFiles(BaseModel):
-    mri_files: List[MRIFile]
-
-
 class Annotation(BaseModel):
     id: int
     name: str
@@ -51,12 +46,6 @@ class Annotation(BaseModel):
 
 class MRIFileAnnotations(MRIFile):
     annotation_files: List[Annotation]
-
-
-# TO BE DELETED
-class PatientFilesPatientDetail(BaseModel):
-    patient: Patient
-    mri_files: List[MRIFileAnnotations]
 
 
 class ScreeningInfo(BaseModel):
