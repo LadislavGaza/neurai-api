@@ -40,9 +40,9 @@ async def load_mri_file(id: int, creds=Depends(validate_drive_token)):
 
 
 @router.patch(
-        "/{mri_id}",
-        dependencies=[Depends(validate_api_token)]
-    )
+    "/{mri_id}",
+    dependencies=[Depends(validate_api_token)]
+)
 async def rename_mri(
     mri_id: int,
     mri: s.RenameAnnotationMRI,
@@ -69,13 +69,12 @@ async def upload_annotation(
     creds=Depends(validate_drive_token)
 ):
     mri = await crud.get_mri_file_by_id(id)
-    new_file = await utils.file_uploader(
+    new_file = await utils.annotation_upload(
         files=files,
         creds=creds,
-        mri_id=mri.id,
         patient_id=mri.patient.id,
         user_id=user_id,
-        scan_type="annotation",
+        mri_id=mri.id,
         name=name
     )
     return {"id": new_file[0]["id"]}
@@ -147,10 +146,10 @@ async def remove_annotation(
 
 
 @router.patch(
-        "/{mri_id}/annotations/{annotation_id}", 
-        response_model=s.AnnotationFiles, 
-        dependencies=[Depends(validate_api_token)]
-    )
+    "/{mri_id}/annotations/{annotation_id}", 
+    response_model=s.AnnotationFiles, 
+    dependencies=[Depends(validate_api_token)]
+)
 async def rename_annotation(
     mri_id: int,
     annotation_id: int,
@@ -162,7 +161,6 @@ async def rename_annotation(
         user_id,
         "annotation"    
     )
-
     try:
         await crud.update_annotation_name(annotation_id, annotation.name)
     except IntegrityError:

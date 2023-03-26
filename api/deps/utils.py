@@ -95,29 +95,7 @@ async def get_mri_files_and_annotations_per_screening(user, files, screening_id)
     return mri_files
 
 
-async def file_uploader(
-        files: List[UploadFile],
-        creds: Credentials,
-        patient_id: str,
-        user_id: int,
-        scan_type: str,
-        mri_id,
-        name: str,
-        screening_id: int | None
-):
-    if scan_type == 'annotation':
-        try:
-            id = await crud.create_annotation_file(
-                name=name,
-                mri_id=mri_id,
-                patient_id=patient_id,
-                user_id=user_id,
-            )
-        except IntegrityError:
-            raise APIException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                content={"message": "Annotation name already exists"},
-            )
+async def file_upload(files: List[UploadFile], creds: Credentials):
 
     service = build("drive", "v3", credentials=creds)
 
@@ -158,21 +136,61 @@ async def file_uploader(
             content={"message": "Google Drive upload failed"},
         )
 
-    if scan_type == 'mri':
-        id = await crud.create_mri_file(
+    return new_files
+
+
+async def annotation_upload(
+    files: List[UploadFile],
+    creds: Credentials,
+    patient_id: str,
+    user_id: int,
+    mri_id: int,
+    name: str
+):
+    try:
+        id = await crud.create_annotation_file(
+            name=name,
+            mri_id=mri_id,
+            patient_id=patient_id,
+            user_id=user_id,
+        )
+    except IntegrityError:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": "Annotation name already exists"},
+        )
+
+    new_files = await file_upload(files, creds)
+
+    for new_file in new_files:  
+        await crud.update_annotation_file(
+            id=id,
+            filename=new_file["name"],
+            file_id=new_file["id"]
+        )
+        new_file["id"] = id
+
+    return new_files
+
+
+async def mri_upload(
+    files: List[UploadFile],
+    creds: Credentials,
+    patient_id: str,
+    user_id: int,
+    screening_id: int
+):
+    new_files = await file_upload(files, creds)
+
+    for new_file in new_files:
+        new_file["id"] = await crud.create_mri_file(
             filename=new_file["name"],
             file_id=new_file["id"],
             patient_id=patient_id,
             screening_id=screening_id,
             user_id=user_id,
         )
-    else:
-        await crud.update_annotation_file(
-            id=id,
-            filename=new_file["name"],
-            file_id=new_file["id"]
-        )
-    new_files[0]['id'] = id
+
     return new_files
 
 

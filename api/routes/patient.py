@@ -184,14 +184,11 @@ async def upload_mri(
             status_code=status.HTTP_404_NOT_FOUND,
             content={"message": "Screening does not exist"},
         )
-    new_files = await utils.file_uploader(
+    new_files = await utils.mri_upload(
         files=files,
         creds=creds,
         patient_id=screening.patient_id,
         user_id=user_id,
-        scan_type='mri',
-        mri_id=None,
-        name="",
         screening_id=screening_id
     )
 
