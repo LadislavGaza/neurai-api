@@ -189,26 +189,6 @@ async def patient(
     return new_patient
 
 
-# TO BE DELETED
-@app.get(
-    "/patient/{patient_id}/files",
-    response_model=s.PatientFilesPatientDetail
-)
-async def patient_files(
-    patient_id: str,
-    authorization: str | None = Header(default=None)
-):
-    response = api_get(f"/patient/{patient_id}/files", authorization)
-    patient = await get_patient(patient_id)
-    response_files = response.json()
-
-    response_files["patient"] = (
-        response_files.get("patient", []) | 
-        s.PatientDetail.from_orm(patient).dict()
-    )
-    return response_files
-
-
 @app.get(
     "/patient/{patient_id}/screening",
     response_model=s.PatientDetailScreenings

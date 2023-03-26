@@ -83,38 +83,6 @@ async def patient(
     return patient
 
 
-# TO BE DELETED
-@router.get(
-    "/patient/{patient_id}/files",
-    response_model=s.PatientFilesPatientDetail
-)
-async def patient_files(
-    patient_id: str,
-    creds=Depends(validate_drive_token),
-    user_id: int = Depends(validate_api_token),
-):
-    patient = await crud.get_patient_by_id(patient_id)
-    if patient is None:
-        raise APIException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": "Patient does not exist"},
-        )
-
-    service = build("drive", "v3", credentials=creds)
-    folder_id = utils.get_drive_folder_id(service)
-    # list the folder content
-    files = utils.get_drive_folder_content(service, folder_id)
-
-    user = await crud.get_user_by_id(user_id)
-    mri_files = await utils.get_mri_files_and_annotations_per_user(
-        user=user, files=files, patient_id=patient_id
-    )
-    return {
-        "patient": patient,
-        "mri_files": mri_files
-    }
-
-
 @router.get(
     "/patient/{patient_id}/screening",
     response_model=s.PatientDetailScreenings
@@ -170,30 +138,6 @@ async def screening_files(
     return {
         "mri_files": mri_files
     }
-
-
-# TO BE DELETED
-@router.post(
-    "/patient/{patient_id}/files",
-    response_model=s.PatientFiles
-)
-async def upload_mri(
-    patient_id: str,
-    user_id: int = Depends(validate_api_token),
-    creds=Depends(validate_drive_token),
-    files: List[UploadFile] = File(...),
-):
-    new_files = await utils.file_uploader(
-        files=files,
-        creds=creds,
-        patient_id=patient_id,
-        user_id=user_id,
-        scan_type='mri',
-        mri_id=None,
-        name=""
-    )
-
-    return {"mri_files": new_files}
 
 
 @router.post(
