@@ -243,6 +243,22 @@ async def update_annotation_name(
         await session.commit()
 
 
+async def update_mri_name(
+        id: int,
+        name: str,
+):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.MRIFile)
+            .where(m.MRIFile.id == id)
+            .values({
+                "filename": name
+            })
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
 async def create_screening(name: str, patient_id: str, user_id: int):
     screening_model = m.Screening(
         name=name,

@@ -217,19 +217,22 @@ def get_annotations_per_user(annotations, files):
     return annotation_files
 
 
-async def verify_annotaion_creator(annotation_id, user_id):
-    annotation = await crud.get_annotation_by_id(annotation_id)
-    if not annotation:
+async def verify_file_creator(file_id, user_id, file_type):
+    if file_type == "annotation":
+        file = await crud.get_annotation_by_id(file_id)
+    elif file_type == "mri":
+        file = await crud.get_mri_by_id(file_id)
+    if not file:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"message": "File doesn't exists"},
         )
-    if annotation.created_by != user_id:
+    if file.created_by != user_id:
         raise APIException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"message": "Activity not allowed for current user"},
         )
-    return annotation
+    return file
 
 
 async def get_logger():

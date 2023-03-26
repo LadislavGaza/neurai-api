@@ -72,7 +72,7 @@ class AnnotationFiles(BaseModel):
     id: str
     
 
-class RenameAnnotation(BaseModel):
+class RenameAnnotationMRI(BaseModel):
     name: str
 
 

@@ -39,6 +39,27 @@ async def load_mri_file(id: int, creds=Depends(validate_drive_token)):
     return base64.b64encode(f_e.content)
 
 
+@router.patch(
+        "/{mri_id}",
+        dependencies=[Depends(validate_api_token)]
+    )
+async def rename_mri(
+    mri_id: int,
+    mri: s.RenameAnnotationMRI,
+    user_id: int = Depends(validate_api_token),
+):
+    mri_file = await utils.verify_file_creator(mri_id, user_id, "mri")
+
+    try:
+        await crud.update_mri_name(mri_id, mri.name)
+    except IntegrityError:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": "MRI name already exists"},
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post("/{id}/annotations", response_model=s.AnnotationFiles)
 async def upload_annotation(
     id: int,
@@ -107,7 +128,11 @@ async def remove_annotation(
 ):
     service = build("drive", "v3", credentials=creds)
 
-    annotation = await utils.verify_annotaion_creator(annotation_id, user_id)
+    annotation = await utils.verify_file_creator(
+        annotation_id,
+        user_id,
+        "annotation"
+    )
 
     try:
         await crud.delete_annotation(annotation_id)
@@ -129,10 +154,14 @@ async def remove_annotation(
 async def rename_annotation(
     mri_id: int,
     annotation_id: int,
-    annotation: s.RenameAnnotation,
+    annotation: s.RenameAnnotationMRI,
     user_id: int = Depends(validate_api_token),
 ):
-    annot = await utils.verify_annotaion_creator(annotation_id, user_id)
+    annot = await utils.verify_file_creator(
+        annotation_id,
+        user_id,
+        "annotation"    
+    )
 
     try:
         await crud.update_annotation_name(annotation_id, annotation.name)
