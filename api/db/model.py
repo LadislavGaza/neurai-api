@@ -108,8 +108,7 @@ class Screening(Base):
 
 class MRIFile(Base):
     __tablename__ = 'mri_files'
-    # NAVRH: nepridame sem takto constraint? (plus potom vygenerovat migraciu)
-    # __table_args__ = (UniqueConstraint('filename', 'screening_id'),)
+    __table_args__ = (UniqueConstraint('filename', 'screening_id'),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     filename: Mapped[str]

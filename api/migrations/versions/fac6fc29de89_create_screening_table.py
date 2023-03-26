@@ -35,10 +35,12 @@ def upgrade() -> None:
     op.add_column('mri_files', sa.Column('screening_id', sa.Integer(), nullable=False))
     op.create_foreign_key('mri_files_screening_id_fk', 'mri_files', 'screenings', ['screening_id'], ['id'], ondelete='CASCADE')
     op.create_unique_constraint('ix_screening_name_patient_id', 'screenings', ['name', 'patient_id'])
+    op.create_unique_constraint('ix_mri_files_filename_screening_id', 'mri_files', ['filename', 'screening_id'])
 
 
 def downgrade() -> None:
     op.drop_constraint('ix_screening_name_patient_id', 'screenings', type_='unique')
+    op.drop_constraint('ix_mri_files_filename_screening_id', 'mri_files', type_='unique')
     op.drop_constraint('mri_files_screening_id_fk', 'mri_files', type_='foreignkey')
     op.drop_column('mri_files', 'screening_id')
     op.drop_table('screenings')

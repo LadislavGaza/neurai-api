@@ -46,7 +46,7 @@ def get_drive_folder_id(service):
     ).execute()
     items = results.get("files", [])
 
-    # if NeurAI folder doesn"t exist we need to retry authorization
+    # if NeurAI folder doesn't exist we need to retry authorization
     if not items:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
