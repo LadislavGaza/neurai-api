@@ -101,7 +101,7 @@ async def get_mri_files_and_annotations_per_screening(user, files, screening_id)
     drive_file_ids = [record["id"] for record in files]
 
     for file in user.mri_files:
-        if file.file_id in drive_file_ids and file.screening.id == screening_id:
+        if file.file_id in drive_file_ids and file.screening_id == screening_id:
             annotations = await crud.get_annotations_by_mri_and_user(
                 mri_id = file.id, user_id = user.id
             )
