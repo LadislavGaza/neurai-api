@@ -62,7 +62,7 @@ async def validation_exception_handler(request, err: HTTPException):
 
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"message": "Authentification failed", "type": "auth"},
+            content={"message": "Authentification failed", "type": "google"},
         )
     else:
         return JSONResponse(

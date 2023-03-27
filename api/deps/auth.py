@@ -1,5 +1,4 @@
 import jwt
-import logging
 
 from fastapi import Depends, status
 from fastapi.security import OAuth2PasswordBearer
