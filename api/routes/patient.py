@@ -142,7 +142,7 @@ async def screening_files(
 
 @router.post(
     "/patient/{patient_id}/screening",
-    response_model=s.CreateScreening
+    response_model=s.ScreeningInfo
 )
 async def create_screening(
     patient_id: str,
@@ -165,7 +165,7 @@ async def create_screening(
             content={"message": "Screening name already exists"},
         )
 
-    return {"id": new_screening.id, "screening_name": new_screening.name}
+    return new_screening
 
 
 @router.post(

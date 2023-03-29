@@ -104,11 +104,6 @@ class GoogleFiles(BaseModel):
     files: List[GoogleFile]
 
 
-class CreateScreening(BaseModel):
-    id: int
-    screening_name: str
-
-
 class Screening(BaseModel):
     name: str | None
 
@@ -116,6 +111,8 @@ class Screening(BaseModel):
 class ScreeningInfo(BaseModel):
     id: int
     name: str
+    created_at: datetime
+    modified_at: datetime
 
     class Config:
         orm_mode = True

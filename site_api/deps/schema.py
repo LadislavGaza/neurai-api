@@ -51,6 +51,8 @@ class MRIFileAnnotations(MRIFile):
 class ScreeningInfo(BaseModel):
     id: int
     name: str
+    created_at: datetime
+    modified_at: datetime
 
 
 class PatientDetailScreenings(BaseModel):
