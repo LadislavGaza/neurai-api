@@ -111,6 +111,11 @@ async def load_annotation(
     service = build("drive", "v3", credentials=creds)
     f_e = utils.MRIFile(filename="", content="")
     annotation = await crud.get_annotation_by_id(annotation_id)
+    if annotation is None:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": "Annotation does not exist"},
+        )
     f_e.download_decrypted(service, annotation.file_id)
 
     return base64.b64encode(f_e.content)
@@ -138,7 +143,7 @@ async def remove_annotation(
         service.files().delete(fileId=annotation.file_id).execute()
     except Exception:
         raise APIException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_404_NOT_FOUND,
             content={"message": "File does not exist"},
         )
 
