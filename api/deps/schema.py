@@ -106,6 +106,7 @@ class GoogleFiles(BaseModel):
 
 class CreateScreening(BaseModel):
     id: int
+    screening_name: str
 
 
 class Screening(BaseModel):

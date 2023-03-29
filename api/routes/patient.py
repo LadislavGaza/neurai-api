@@ -154,7 +154,7 @@ async def create_screening(
         screening.name = datetime.now().strftime('%d-%m-%Y')
 
     try:
-        screening_id = await crud.create_screening(
+        new_screening= await crud.create_screening(
             name=screening.name,
             patient_id=patient_id,
             user_id=user_id
@@ -165,7 +165,7 @@ async def create_screening(
             content={"message": "Screening name already exists"},
         )
 
-    return {"id": screening_id}
+    return {"id": new_screening.id, "screening_name": new_screening.name}
 
 
 @router.post(

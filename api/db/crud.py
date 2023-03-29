@@ -270,7 +270,7 @@ async def create_screening(name: str, patient_id: str, user_id: int):
         session.add(screening_model)
         await session.commit()
         await session.refresh(screening_model)
-    return screening_model.id
+    return screening_model
 
 
 async def get_screenings_by_patient_and_user(patient_id: int, user_id: int) -> Iterable[m.Screening]:
