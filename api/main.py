@@ -5,7 +5,7 @@ from logging.config import dictConfig
 from fastapi import (
     FastAPI,
     status,
-    HTTPException,
+    HTTPException, Depends,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -14,8 +14,7 @@ from google.auth.transport.requests import Request
 
 from api.routes import patient, gdrive, users, mri
 from api.deps import const
-from api.deps.utils import APIException
-
+from api.deps.utils import APIException, get_localization_data
 
 log = const.LOGGING()
 dictConfig(log.CONFIG)
@@ -45,7 +44,10 @@ app_languages = ["sk", "en"]
 
 
 @app.exception_handler(APIException)
-async def api_exception_handler(request: Request(), exc: APIException):
+async def api_exception_handler(
+        request: Request(),
+        exc: APIException,
+):
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.content,
@@ -53,7 +55,11 @@ async def api_exception_handler(request: Request(), exc: APIException):
 
 
 @app.exception_handler(HTTPException)
-async def validation_exception_handler(request, err: HTTPException):
+async def validation_exception_handler(
+        request,
+        err: HTTPException
+):
+    translation = get_localization_data(request)
 
     if (
         "/google/" in str(request.url)
@@ -62,12 +68,12 @@ async def validation_exception_handler(request, err: HTTPException):
 
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"message": "Authentification failed", "type": "google"},
+            content={"message": translation["drive_authorization_failed"], "type": "google"},
         )
     else:
         return JSONResponse(
             status_code=err.status_code,
-            content={"message": "Exception", "detail": err.detail},
+            content={"message": translation['user_missing'], "type": "auth"},
         )
 
 

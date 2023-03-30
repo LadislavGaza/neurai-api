@@ -70,10 +70,15 @@ async def api_exception_handler(request, exc: APIException):
 
 
 @app.exception_handler(HTTPException)
-async def validation_exception_handler(request, err: HTTPException):
+async def validation_exception_handler(
+        request,
+        err: HTTPException,
+):
+    translation = await get_localization_data(request)
+
     return JSONResponse(
         status_code=err.status_code,
-        content={"message": "Exception", "detail": err.detail},
+        content={"message": translation["wrong_login"], "type": "auth"},
     )
 
 
