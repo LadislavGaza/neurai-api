@@ -7,12 +7,13 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - "api/config/api.env"
+      - "./api/config/api.env"
     volumes:
       - ./api:/neurai/api
       - logs_api:/var/log
     depends_on:
-      - "db"
+      db:
+        condition: service_healthy
     restart: always
 
   site_api:
@@ -22,21 +23,29 @@ services:
     ports:
       - "8081:8081"
     env_file:
-      - "site_api/config/api.env"
+      - "./site_api/config/api.env"
     volumes:
       - ./site_api:/neurai/site_api
       - ./site_api/sqlite:/neurai/db:rw
       - logs_site_api:/var/log/
+    depends_on:
+      db:
+        condition: service_healthy
     restart: always
 
   db:
     image: postgres:15
     env_file:
-      - "api/config/db.env"
+      - "./api/config/db.env"
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
     restart: always
 
 volumes:
