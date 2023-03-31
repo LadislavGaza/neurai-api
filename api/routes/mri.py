@@ -7,7 +7,7 @@ from fastapi import (
     status,
     Form,
     File,
-    UploadFile, Header,
+    UploadFile,
 )
 from sqlalchemy.exc import IntegrityError
 

@@ -1,11 +1,9 @@
-import base64
-import logging
 from logging.config import dictConfig
 
 from fastapi import (
     FastAPI,
     status,
-    HTTPException, Depends,
+    HTTPException,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -73,7 +71,7 @@ async def validation_exception_handler(
     else:
         return JSONResponse(
             status_code=err.status_code,
-            content={"message": translation['user_missing'], "type": "auth"},
+            content={"message": translation["user_missing"], "type": "auth"},
         )
 
 
