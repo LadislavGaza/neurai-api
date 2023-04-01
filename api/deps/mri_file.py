@@ -1,7 +1,5 @@
 from io import BytesIO
-from typing import List
 
-from dicom2nifti.exceptions import ConversionValidationError
 from googleapiclient.http import MediaIoBaseUpload
 from fastapi import status
 
@@ -16,11 +14,10 @@ from gzip import compress
 import tempfile
 from pathlib import Path
 
-from random import choice, choices
+from random import choice
 from string import ascii_lowercase
 
 from api.deps import const
-
 
 
 class MRIFile:
@@ -42,7 +39,7 @@ class MRIFile:
             Nifti1Image.from_file_map({"header": fh, "image": fh})
             patient_name = None  # nifti doesn"t include patient name
 
-    def create_valid_series(self, files_length, nifti_file, dicom_files):
+    def create_valid_series(self, files_length, nifti_file, dicom_files, translation):
         self.check_file_type()
 
         if self.is_nifti:
@@ -50,7 +47,7 @@ class MRIFile:
                 raise APIException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     content={
-                        "message": "More than one scanning uploaded"
+                        "message": translation["more_than_one_scanning_uploaded"]
                     },
                 )
             nifti_file = self
@@ -59,7 +56,7 @@ class MRIFile:
                 raise APIException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     content={
-                        "message": "More than one scanning uploaded"
+                        "message": translation["more_than_one_scanning_uploaded"]
                     },
                 )
             dicom_files.append(self)

@@ -24,7 +24,7 @@ from requests.exceptions import (
 from site_api.deps import const
 from site_api.db import crud
 import site_api.deps.schema as s
-
+from site_api.deps.utils import get_localization_data
 
 log = const.LOGGING()
 dictConfig(log.CONFIG)
@@ -48,6 +48,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+language_fallback = "sk"
+app_languages = ["sk", "en"]
 
 
 class APIException(Exception):
@@ -68,10 +70,15 @@ async def api_exception_handler(request, exc: APIException):
 
 
 @app.exception_handler(HTTPException)
-async def validation_exception_handler(request, err: HTTPException):
+async def validation_exception_handler(
+        request,
+        err: HTTPException,
+):
+    translation = await get_localization_data(request)
+
     return JSONResponse(
         status_code=err.status_code,
-        content={"message": "Exception", "detail": err.detail},
+        content={"message": translation["wrong_login"], "type": "auth"},
     )
 
 
@@ -79,12 +86,12 @@ async def get_logger():
     return logging.getLogger(const.APP_NAME)
 
 
-async def get_patient(patient_id):
+async def get_patient(patient_id, translation=Depends(get_localization_data)):
     patient = await crud.get_patient_by_id(patient_id)
     if patient is None:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": "Patient does not exist"},
+            content={"message": translation["patient_not_exists"]},
         )
 
     return patient

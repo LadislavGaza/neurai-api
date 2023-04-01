@@ -18,7 +18,7 @@ from api.deps.auth import (
     validate_reset_token, validate_api_token, get_logger
 )
 from api.services.smtp_service import send_reset_email
-from api.deps.utils import APIException
+from api.deps.utils import APIException, get_localization_data
 
 
 router = APIRouter(
@@ -28,8 +28,11 @@ router = APIRouter(
 
 
 @router.post("/registration")
-async def registration(user: s.UserCredential, log = Depends(get_logger)):
-
+async def registration(
+        user: s.UserCredential,
+        log=Depends(get_logger),
+        translation=Depends(get_localization_data)
+):
     if (
         len(user.password) < 8
         or user.password.lower() == user.password
@@ -38,12 +41,12 @@ async def registration(user: s.UserCredential, log = Depends(get_logger)):
     ):
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Password invalid format"},
+            content={"message": translation["invalid_password"]},
         )
     if not user.username:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Username field is missing"},
+            content={"message": translation["username_missing"]},
         )
     try:
         user.password = argon2.hash(user.password)
@@ -52,7 +55,7 @@ async def registration(user: s.UserCredential, log = Depends(get_logger)):
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "User with this name already exists"},
+            content={"message": translation["username_taken"]}
         )
 
     log.info(
@@ -64,7 +67,12 @@ async def registration(user: s.UserCredential, log = Depends(get_logger)):
 
 
 @router.post("/login", response_model=s.Login)
-async def login(user: s.UserLoginCredentials, log = Depends(get_logger)):
+async def login(
+        user: s.UserLoginCredentials,
+        log=Depends(get_logger),
+        translation=Depends(get_localization_data)
+
+):
     account = await crud.get_user(user)
 
     valid_credentials = account is not None and argon2.verify(
@@ -109,12 +117,16 @@ async def login(user: s.UserLoginCredentials, log = Depends(get_logger)):
 
     raise APIException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        content={"message": "Wrong email or password", "type": "auth"},
+        content={"message": translation['wrong_login'], "type": "auth"},
     )
 
 
 @router.post("/reset-password")
-async def reset_password(user: s.ResetPassword, log = Depends(get_logger)):
+async def reset_password(
+        user: s.ResetPassword,
+        log=Depends(get_logger),
+        translation=Depends(get_localization_data)
+):
     expiration = (
         datetime.utcnow() +
         timedelta(seconds=const.JWT.EXPIRATION_PASSWORD_RESET)
@@ -133,20 +145,21 @@ async def reset_password(user: s.ResetPassword, log = Depends(get_logger)):
         extra={"topic": "REGISTRATION"}
     )
 
-    return {"message": "Password reset email sent successfully"}
+    return {"message": translation["reset_password"]}
 
 
 @router.post("/change-password")
 async def change_password(
     data: s.ChangePassword,
     email: str = Depends(validate_reset_token),
-    log = Depends(get_logger)
+    log=Depends(get_logger),
+    translation=Depends(get_localization_data)
 ):
     user = await crud.get_user_by_mail(email)
     if not user:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": "User not found"},
+            content={"message": translation["user_missing"]}
         )
     if (
         len(data.password) < 8
@@ -156,7 +169,7 @@ async def change_password(
     ):
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Password invalid format"},
+            content={"message": translation["invalid_password"]}
         )
     password_hash = argon2.hash(data.password)
     await crud.update_user_password(user_id=user.id, password=password_hash)
@@ -166,7 +179,7 @@ async def change_password(
         extra={"topic": "REGISTRATION"}
     )
 
-    return {"message": "Password successfully changed"}
+    return {"message": translation["password_changed"]}
 
 
 @router.get("/profile", response_model=s.UserProfile)
