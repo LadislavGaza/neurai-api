@@ -143,7 +143,8 @@ async def annotation_upload(
     patient_id: str,
     user_id: int,
     mri_id: int,
-    name: str
+    name: str,
+    translation
 ):
     try:
         id = await crud.create_annotation_file(
@@ -155,10 +156,10 @@ async def annotation_upload(
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Annotation name already exists"},
+            content={"message": translation["annotation_name_exists"]},
         )
 
-    new_files = await file_upload(files, creds)
+    new_files = await file_upload(files, creds, translation)
 
     for new_file in new_files:
         await crud.update_annotation_file(

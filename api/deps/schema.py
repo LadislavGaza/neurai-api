@@ -1,7 +1,7 @@
-from fastapi import File, UploadFile, Form
-from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime, date
 from typing import List
+
+from pydantic import BaseModel, Field, EmailStr
 
 
 class UserCredential(BaseModel):
@@ -70,7 +70,7 @@ class MRIFileAnnotations(MRIFile):
 
 class AnnotationFiles(BaseModel):
     id: str
-    
+
 
 class RenameAnnotationMRI(BaseModel):
     name: str
@@ -78,7 +78,6 @@ class RenameAnnotationMRI(BaseModel):
 
 class PatientFiles(BaseModel):
     mri_files: List[MRIFile]
-
 
 
 class ScreeningFiles(BaseModel):

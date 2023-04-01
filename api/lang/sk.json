@@ -16,5 +16,9 @@
   "mri_files_invalid": "Súbor(y) musia mať platný dicom alebo nifti formát",
   "drive_upload_failed": "Nahrávanie na google drive zlyhalo",
   "activity_not_allowed": "Táto aktivita nie je povolená pre prihláseného použivateľa",
-  "more_than_one_scanning_uploaded": "Bolo nahratých viac ako jedno snimkovanie"
+  "more_than_one_scanning_uploaded": "Bolo nahratých viac ako jedno snimkovanie",
+  "mri_name_exists": "MRI s týmto názvom už existuje",
+  "screening_not_found": "Vyšetrenie nebolo nájdené",
+  "annotation_not_found": "Anotácia nebola nájdená",
+  "screening_name_exists": "Vyšetrenie s týmto názvom už existuje"
 }

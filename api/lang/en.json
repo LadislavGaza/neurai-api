@@ -16,5 +16,9 @@
   "mri_files_invalid": "File(s) must be valid dicom or nifti format",
   "drive_upload_failed": "Upload to Google Drive failed",
   "activity_not_allowed": "Activity not allowed for current user",
-  "more_than_one_scanning_uploaded": "More than one scanning uploaded"
+  "more_than_one_scanning_uploaded": "More than one scanning uploaded",
+  "mri_name_exists": "MRI with this name already exists",
+  "screening_not_found": "Screening not found",
+  "annotation_not_found": "Annotation not found",
+  "screening_name_exists": "Screening with this name already exists"
 }

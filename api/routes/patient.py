@@ -1,18 +1,15 @@
 from datetime import datetime
-
-from fastapi import APIRouter, Depends, File, UploadFile, status, Form
-from googleapiclient.discovery import build
-
 from typing import List
 
-from api.db import crud
-from api.deps import utils
-import api.deps.schema as s
-from api.deps.auth import validate_api_token, validate_drive_token
-from api.deps.utils import APIException, get_localization_data
-
+from fastapi import APIRouter, Depends, File, UploadFile, status
+from googleapiclient.discovery import build
 from sqlalchemy.exc import IntegrityError
 
+import api.deps.schema as s
+from api.db import crud
+from api.deps import utils
+from api.deps.auth import validate_api_token, validate_drive_token
+from api.deps.utils import APIException, get_localization_data
 
 router = APIRouter(
     tags=["patient"],
@@ -121,12 +118,13 @@ async def screening_files(
     screening_id: int,
     creds=Depends(validate_drive_token),
     user_id: int = Depends(validate_api_token),
+    translation=Depends(get_localization_data)
 ):
     screening = await crud.get_screening_by_id_and_user(screening_id, user_id)
     if screening is None:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": "Screening does not exist"},
+            content={"message": translation["screening_not_found"]},
         )
 
     service = build("drive", "v3", credentials=creds)
@@ -151,13 +149,14 @@ async def create_screening(
     patient_id: str,
     screening: s.Screening,
     user_id: int = Depends(validate_api_token),
+    translation=Depends(get_localization_data)
 ):
     # default name for screening is actual date
     if not screening.name:
         screening.name = datetime.now().strftime('%d-%m-%Y')
 
     try:
-        new_screening= await crud.create_screening(
+        new_screening = await crud.create_screening(
             name=screening.name,
             patient_id=patient_id,
             user_id=user_id
@@ -165,7 +164,7 @@ async def create_screening(
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "Screening name already exists"},
+            content={"message": translation["screening_name_exists"]}
         )
 
     return new_screening
@@ -180,19 +179,21 @@ async def upload_mri(
     user_id: int = Depends(validate_api_token),
     creds=Depends(validate_drive_token),
     files: List[UploadFile] = File(...),
+    translation=Depends(get_localization_data)
 ):
     screening = await crud.get_screening_by_id_and_user(screening_id, user_id)
     if screening is None:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": "Screening does not exist"},
+            content={"message": translation["screening_not_found"]},
         )
     new_files = await utils.mri_upload(
         files=files,
         creds=creds,
         patient_id=screening.patient_id,
         user_id=user_id,
-        screening_id=screening_id
+        screening_id=screening_id,
+        translation=translation
     )
 
     return {"mri_files": new_files}

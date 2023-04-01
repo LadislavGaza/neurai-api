@@ -47,15 +47,16 @@ async def rename_mri(
     mri_id: int,
     mri: s.RenameAnnotationMRI,
     user_id: int = Depends(validate_api_token),
+    translation=Depends(get_localization_data)
 ):
-    mri_file = await utils.verify_file_creator(mri_id, user_id, "mri")
+    mri_file = await utils.verify_file_creator(mri_id, user_id, "mri", translation)
 
     try:
         await crud.update_mri_name(mri_id, mri.name)
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": "MRI name already exists"},
+            content={"message": translation["mri_name_exists"]},
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -110,6 +111,7 @@ async def load_annotation(
     id: int,
     annotation_id: int,
     creds=Depends(validate_drive_token),
+    translation=Depends(get_localization_data)
 ):
     service = build("drive", "v3", credentials=creds)
     f_e = utils.MRIFile(filename="", content="")
@@ -117,7 +119,7 @@ async def load_annotation(
     if annotation is None:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": "Annotation does not exist"},
+            content={"message": translation["annotation_not_found"]},
         )
     f_e.download_decrypted(service, annotation.file_id)
 
