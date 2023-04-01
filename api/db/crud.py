@@ -96,11 +96,12 @@ async def get_patient_by_id(patient_id: str) -> m.Patient:
     return result.scalars().first()
 
 
-async def create_mri_file(filename: str, file_id: str, patient_id: str, user_id: int):
+async def create_mri_file(filename: str, file_id: str, patient_id: str, screening_id: int, user_id: int):
     mri_file_model = m.MRIFile(
         filename=filename,
         file_id=file_id,
         patient_id=patient_id,
+        screening_id=screening_id,
         created_by=user_id,
         modified_by=user_id,
     )
@@ -240,3 +241,60 @@ async def update_annotation_name(
         )
         await session.execute(stmt)
         await session.commit()
+
+
+async def update_mri_name(
+        id: int,
+        name: str,
+):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.MRIFile)
+            .where(m.MRIFile.id == id)
+            .values({
+                "filename": name
+            })
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
+async def create_screening(name: str, patient_id: str, user_id: int):
+    screening_model = m.Screening(
+        name=name,
+        patient_id=patient_id,
+        created_by=user_id,
+        modified_by=user_id,
+    )
+    async with AsyncSession(m.engine) as session:
+        session.add(screening_model)
+        await session.commit()
+        await session.refresh(screening_model)
+    return screening_model
+
+
+async def get_screenings_by_patient_and_user(patient_id: int, user_id: int) -> Iterable[m.Screening]:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Screening)
+            .where(
+                m.Screening.patient_id == patient_id,
+                m.Screening.created_by == user_id
+            )
+            .order_by(m.Screening.created_at.desc())
+        )
+        result = await session.execute(query)
+    return result.scalars().all()
+
+
+async def get_screening_by_id_and_user(screening_id: int, user_id: int) -> m.Screening:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Screening).where(
+                m.Screening.id == screening_id,
+                m.Screening.created_by == user_id
+            )
+        )
+        result = await session.execute(query)
+
+    return result.scalars().first()

@@ -190,14 +190,14 @@ async def patient(
 
 
 @app.get(
-    "/patient/{patient_id}/files",
-    response_model=s.PatientFilesPatientDetail
+    "/patient/{patient_id}/screening",
+    response_model=s.PatientDetailScreenings
 )
-async def patient_files(
+async def patient_screenings(
     patient_id: str,
     authorization: str | None = Header(default=None)
 ):
-    response = api_get(f"/patient/{patient_id}/files", authorization)
+    response = api_get(f"/patient/{patient_id}/screening", authorization)
     patient = await get_patient(patient_id)
     response_files = response.json()
 

@@ -36,10 +36,6 @@ class MRIFile(BaseModel):
     modified_at: datetime
 
 
-class PatientFiles(BaseModel):
-    mri_files: List[MRIFile]
-
-
 class Annotation(BaseModel):
     id: int
     name: str
@@ -52,6 +48,13 @@ class MRIFileAnnotations(MRIFile):
     annotation_files: List[Annotation]
 
 
-class PatientFilesPatientDetail(BaseModel):
+class ScreeningInfo(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+    modified_at: datetime
+
+
+class PatientDetailScreenings(BaseModel):
     patient: Patient
-    mri_files: List[MRIFileAnnotations]
+    screenings: List[ScreeningInfo]
