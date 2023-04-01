@@ -43,6 +43,11 @@ class User(Base):
         foreign_keys='[Annotation.created_by]',
         back_populates='creator'
     )
+    screenings = relationship(
+        'Screening',
+        foreign_keys='[Screening.created_by]',
+        back_populates='creator'
+    )
 
 
 class Patient(Base):
@@ -63,19 +68,56 @@ class Patient(Base):
     )
 
     mri_files = relationship('MRIFile', back_populates='patient')
+    screenings = relationship('Screening', back_populates='patient')
     annotations = relationship('Annotation', back_populates='patient')
     creator = relationship(User, foreign_keys=[created_by])
     editor = relationship(User, foreign_keys=[modified_by])
 
 
+class Screening(Base):
+    __tablename__ = 'screenings'
+    __table_args__ = (UniqueConstraint('name', 'patient_id'),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    patient_id: Mapped[str] = mapped_column(
+        String(20), ForeignKey("patients.id")
+    )
+
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+    created_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete='CASCADE')
+    )
+    modified_at: Mapped[datetime] = mapped_column(
+        default=datetime.now, onupdate=datetime.now, nullable=True
+    )
+    modified_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete='CASCADE'), nullable=True
+    )
+
+    patient = relationship(
+        Patient, foreign_keys=[patient_id], back_populates='screenings'
+    )
+    creator = relationship(
+        User, foreign_keys=[created_by], back_populates='screenings'
+    )
+    editor = relationship(User, foreign_keys=[modified_by])
+
+    mri_files = relationship('MRIFile', back_populates='screening')
+
+
 class MRIFile(Base):
     __tablename__ = 'mri_files'
+    __table_args__ = (UniqueConstraint('filename', 'screening_id'),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     filename: Mapped[str]
     file_id: Mapped[str]
     patient_id: Mapped[str] = mapped_column(
         String(20), ForeignKey("patients.id")
+    )
+    screening_id: Mapped[int] = mapped_column(
+         ForeignKey("screenings.id", ondelete='CASCADE')
     )
 
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
@@ -98,6 +140,10 @@ class MRIFile(Base):
     editor = relationship(User, foreign_keys=[modified_by])
 
     annotations = relationship('Annotation', back_populates='mri_file')
+
+    screening = relationship(
+        Screening, foreign_keys=[screening_id], back_populates='mri_files'
+    )
 
 
 class Annotation(Base):
@@ -136,4 +182,3 @@ class Annotation(Base):
     mri_file = relationship(
         MRIFile, foreign_keys=[mri_file_id], back_populates='annotations'
     )
-

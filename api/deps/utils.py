@@ -67,12 +67,12 @@ def get_drive_folder_content(service, folder_id):
     return files
 
 
-async def get_mri_files_and_annotations_per_user(user, files, patient_id):
+async def get_mri_files_and_annotations_per_screening(user, files, screening_id):
     mri_files = []
     drive_file_ids = [record["id"] for record in files]
 
     for file in user.mri_files:
-        if file.file_id in drive_file_ids and file.patient.id == patient_id:
+        if file.file_id in drive_file_ids and file.screening_id == screening_id:
             annotations = await crud.get_annotations_by_mri_and_user(
                 mri_id=file.id, user_id=user.id
             )
@@ -90,29 +90,7 @@ async def get_mri_files_and_annotations_per_user(user, files, patient_id):
     return mri_files
 
 
-async def file_uploader(
-        files: List[UploadFile],
-        creds: Credentials,
-        patient_id: str,
-        user_id: int,
-        scan_type: str,
-        mri_id,
-        name: str,
-        translation
-):
-    if scan_type == 'annotation':
-        try:
-            id = await crud.create_annotation_file(
-                name=name,
-                mri_id=mri_id,
-                patient_id=patient_id,
-                user_id=user_id,
-            )
-        except IntegrityError:
-            raise APIException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                content={"message": translation["annotation_name_exists"]},
-            )
+async def file_upload(files: List[UploadFile], creds: Credentials, translation):
 
     service = build("drive", "v3", credentials=creds)
 
@@ -156,20 +134,62 @@ async def file_uploader(
             content={"message": translation["drive_upload_failed"]},
         )
 
-    if scan_type == 'mri':
-        id = await crud.create_mri_file(
-            filename=new_file["name"],
-            file_id=new_file["id"],
+    return new_files
+
+
+async def annotation_upload(
+    files: List[UploadFile],
+    creds: Credentials,
+    patient_id: str,
+    user_id: int,
+    mri_id: int,
+    name: str
+):
+    try:
+        id = await crud.create_annotation_file(
+            name=name,
+            mri_id=mri_id,
             patient_id=patient_id,
             user_id=user_id,
         )
-    else:
+    except IntegrityError:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": "Annotation name already exists"},
+        )
+
+    new_files = await file_upload(files, creds)
+
+    for new_file in new_files:
         await crud.update_annotation_file(
             id=id,
             filename=new_file["name"],
             file_id=new_file["id"]
         )
-    new_files[0]['id'] = id
+        new_file["id"] = id
+
+    return new_files
+
+
+async def mri_upload(
+    files: List[UploadFile],
+    creds: Credentials,
+    patient_id: str,
+    user_id: int,
+    screening_id: int,
+    translation
+):
+    new_files = await file_upload(files, creds, translation)
+
+    for new_file in new_files:
+        new_file["id"] = await crud.create_mri_file(
+            filename=new_file["name"],
+            file_id=new_file["id"],
+            patient_id=patient_id,
+            screening_id=screening_id,
+            user_id=user_id,
+        )
+
     return new_files
 
 
@@ -190,19 +210,22 @@ def get_annotations_per_user(annotations, files):
     return annotation_files
 
 
-async def verify_annotaion_creator(annotation_id, user_id, translation):
-    annotation = await crud.get_annotation_by_id(annotation_id)
-    if not annotation:
+async def verify_file_creator(file_id, user_id, file_type, translation):
+    if file_type == "annotation":
+        file = await crud.get_annotation_by_id(file_id)
+    elif file_type == "mri":
+        file = await crud.get_mri_by_id(file_id)
+    if not file:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"message": translation["file_not_found"]},
         )
-    if annotation.created_by != user_id:
+    if file.created_by != user_id:
         raise APIException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"message": translation["activity_not_allowed"]},
         )
-    return annotation
+    return file
 
 
 async def get_logger():

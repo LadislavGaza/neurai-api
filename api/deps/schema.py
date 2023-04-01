@@ -72,7 +72,7 @@ class AnnotationFiles(BaseModel):
     id: str
     
 
-class RenameAnnotation(BaseModel):
+class RenameAnnotationMRI(BaseModel):
     name: str
 
 
@@ -80,8 +80,8 @@ class PatientFiles(BaseModel):
     mri_files: List[MRIFile]
 
 
-class PatientFilesPatientDetail(BaseModel):
-    patient: Patient
+
+class ScreeningFiles(BaseModel):
     mri_files: List[MRIFileAnnotations]
 
 
@@ -102,3 +102,22 @@ class GoogleFile(BaseModel):
 
 class GoogleFiles(BaseModel):
     files: List[GoogleFile]
+
+
+class Screening(BaseModel):
+    name: str | None
+
+
+class ScreeningInfo(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+    modified_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+class PatientDetailScreenings(BaseModel):
+    patient: Patient
+    screenings: List[ScreeningInfo]
