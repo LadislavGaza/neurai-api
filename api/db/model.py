@@ -160,6 +160,9 @@ class Annotation(Base):
     patient_id: Mapped[str] = mapped_column(
         String(20), ForeignKey("patients.id")
     )
+    is_ai: Mapped[bool] = mapped_column(default=False)
+    job_name: Mapped[str] = mapped_column(nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete='CASCADE')
