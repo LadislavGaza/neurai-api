@@ -1,0 +1,24 @@
+# https://book.orthanc-server.com/users/docker-osimis.html
+version: "3"
+services:
+  orthanc:
+    image: osimis/orthanc
+    restart: unless-stopped
+    ports:
+      - "11112:11112"
+      - "8010:8010"
+    volumes:
+      - "orthanc-storage:/var/lib/orthanc/db:Z"
+    environment:
+      VERBOSE_ENABLED: "true"
+      VERBOSE_STARTUP: "true"
+      # ORTHANC_JSON: |
+    secrets:
+        - "orthanc.secret.json"
+
+secrets:
+  orthanc.secret.json:
+    file: orthanc.secret.json
+
+volumes:
+  orthanc-storage:
