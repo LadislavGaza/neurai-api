@@ -17,6 +17,7 @@ from googleapiclient.discovery import build
 import api.deps.schema as s
 from api.db import crud
 from api.deps import utils
+from api.deps.upload import annotation_upload
 from api.deps.utils import APIException, get_localization_data
 from api.deps.auth import validate_api_token, validate_drive_token
 
@@ -71,7 +72,7 @@ async def upload_annotation(
     translation=Depends(get_localization_data)
 ):
     mri = await crud.get_mri_file_by_id(id)
-    new_file = await utils.annotation_upload(
+    new_file = await annotation_upload(
         files=files,
         creds=creds,
         patient_id=mri.patient.id,

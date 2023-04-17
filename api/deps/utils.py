@@ -1,25 +1,12 @@
 import json
-
-from sqlalchemy.exc import IntegrityError
-from typing import List
-
-from dicom2nifti.exceptions import ConversionValidationError
-from google.auth.api_key import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-
-from nibabel.spatialimages import HeaderDataError
-from nibabel.wrapstruct import WrapStructError
-
 import logging
 from random import choices
 import string
+from typing import List
+from fastapi import status, Request
 
 from api.db import crud
 from api.deps import const
-from api.deps.mri_file import MRIFile
-
-from fastapi import status, UploadFile, Request
 
 import api.main as main
 
@@ -88,110 +75,6 @@ async def get_mri_files_and_annotations_per_screening(user, files, screening_id)
             })
 
     return mri_files
-
-
-async def file_upload(files: List[UploadFile], creds: Credentials, translation):
-
-    service = build("drive", "v3", credentials=creds)
-
-    folder_id = get_drive_folder_id(service, translation)
-    new_files = []
-    dicom_files = []
-    nifti_file = None
-    try:
-        for input_file in files:
-            file = MRIFile(filename=input_file.filename, content=input_file.file)
-
-            nifti_file, dicom_files = file.create_valid_series(
-                files_length=len(files),
-                nifti_file=nifti_file,
-                dicom_files=dicom_files,
-                translation=translation
-            )
-
-        upload_file = MRIFile(filename="", content=None)
-        upload_file.prepare_zipped_nifti(nifti_file=nifti_file, dicom_files=dicom_files)
-        new_file = upload_file.upload_encrypted(service=service, folder_id=folder_id)
-        new_files.append(new_file)
-
-    except (HeaderDataError, WrapStructError, ConversionValidationError):
-        # Unable to process files for upload
-        # For Nifti: invalid header data or wrong block size
-        # For Dicom: not enough slices (<4) or inconsistent slice increment
-        raise APIException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"message": translation["mri_files_invalid"]},
-        )
-    except APIException as excep:
-        raise excep
-    except HttpError as e:
-        status_code = (
-            e.status_code if e.status_code else status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-        raise APIException(
-            status_code=status_code,
-            content={"message": translation["drive_upload_failed"]},
-        )
-
-    return new_files
-
-
-async def annotation_upload(
-    files: List[UploadFile],
-    creds: Credentials,
-    patient_id: str,
-    user_id: int,
-    mri_id: int,
-    name: str,
-    translation
-):
-    try:
-        id = await crud.create_annotation_file(
-            name=name,
-            mri_id=mri_id,
-            patient_id=patient_id,
-            user_id=user_id,
-        )
-    except IntegrityError:
-        raise APIException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": translation["annotation_name_exists"]},
-        )
-
-    new_files = await file_upload(files, creds, translation)
-
-    for new_file in new_files:
-        await crud.update_annotation_file(
-            id=id,
-            filename=new_file["name"],
-            file_id=new_file["id"]
-        )
-        new_file["id"] = id
-
-    return new_files
-
-
-async def mri_upload(
-    files: List[UploadFile],
-    creds: Credentials,
-    patient_id: str,
-    user_id: int,
-    screening_id: int,
-    translation
-):
-    new_files = await file_upload(files, creds, translation)
-
-    for new_file in new_files:
-        new_file["id"] = await crud.create_mri_file(
-            filename=new_file["name"],
-            file_id=new_file["id"],
-            patient_id=patient_id,
-            screening_id=screening_id,
-            user_id=user_id,
-        )
-
-    return new_files
 
 
 def generate_unique_patient_id():

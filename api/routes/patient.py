@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 import api.deps.schema as s
 from api.db import crud
 from api.deps import utils
+from api.deps.upload import mri_upload
 from api.deps.auth import validate_api_token, validate_drive_token
 from api.deps.utils import APIException, get_localization_data
 
@@ -187,13 +188,15 @@ async def upload_mri(
             status_code=status.HTTP_404_NOT_FOUND,
             content={"message": translation["screening_not_found"]},
         )
-    new_files = await utils.mri_upload(
+
+    mri = await mri_upload(
         files=files,
         creds=creds,
         patient_id=screening.patient_id,
-        user_id=user_id,
         screening_id=screening_id,
+        user_id=user_id,
         translation=translation
     )
+    # await utils.mri_auto_annotate(mri, user_id)
 
-    return {"mri_files": new_files}
+    return {"mri_files": [new_file]}
