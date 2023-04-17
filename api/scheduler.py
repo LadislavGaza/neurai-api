@@ -2,25 +2,28 @@ import asyncio
 from rocketry import Rocketry
 from rocketry.conds import every
 
+from api.deps import inference
+from api.deps import upload
+from api.db import crud
+
 app = Rocketry(config={"task_execution": "async"})
 
 
 @app.task(every('1 minutes', based="finish"))
-async def inference_status():
-    await asyncio.sleep(1)
+async def check_done_inference():
+    active_inferences = await crud.get_running_inferences()
 
+    for annotation in active_inferences:
+        mri = inference.complete(annotation.job_name)
 
-# 1. Z annotations si vytiahnes vsetko co ma jobname IS NOT NULL
-# 2. Pre kazdy jobname urobis 
-#     2.1 job = ml_client.jobs.get(job.name)
-#     2.2 if job.status == Completed
-#         2.2.1 zrob temp directory a spusti download do temp directory
-#         2.2.2 nacitaj subor s nazvom [INPUT FILENAME] z temp directory a zrob ulozenie na gdrive
-#         2.2.3 jobname = null
-#     2.3 if job.status == Failed
-#         2.3.1 jobname = null ??????? raise RuntimeError?
+        if mri is not None:
+            refresh_token = annotation.creator.refresh_token
+            uploaded_file = upload.drive_upload(mri, refresh_token)
+            uploaded_file = mri.upload_encrypted(service, folder_id)
 
-
-# do annotations pridat fieldy:
-# - is_ai boolean NOT NULL
-# - job-name string NULLABLE - NEPOSIELAT NA FE !!! -> zmenit na status = progress / completed
+            await crud.update_annotation_file(
+                id=annotation.id,
+                filename=uploaded_file["name"],
+                file_id=uploaded_file["id"],
+                job_name=None       # Mark job as finished
+            )

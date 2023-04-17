@@ -19,7 +19,6 @@ from nibabel import FileHolder, Nifti1Image
 from nibabel.spatialimages import HeaderDataError
 from nibabel.wrapstruct import WrapStructError
 
-
 from api.deps import const
 
 
@@ -61,20 +60,19 @@ class MRIFile:
             temp_bytes = temp_dir_path / dicom_file.filename
             temp_bytes.write_bytes(dicom_file.content.read())
 
-        temp_file = tempfile.NamedTemporaryFile(suffix=".nii.gz")
-        try:
-            dicom2nifti.dicom_series_to_nifti(
-                temp_dir_path, Path(temp_file.name), reorient_nifti=True
-            )
-        except ConversionValidationError:
-            # Not enough slices (<4) or inconsistent slice increment
-            return False
+        with tempfile.NamedTemporaryFile(suffix=".nii.gz") as temp_file:
+            try:
+                dicom2nifti.dicom_series_to_nifti(
+                    temp_dir_path, Path(temp_file.name), reorient_nifti=True
+                )
+            except ConversionValidationError:
+                # Not enough slices (<4) or inconsistent slice increment
+                return False
 
-        temp_file.seek(0)
-        self.content = BytesIO(temp_file.read())
+            temp_file.seek(0)
+            self.content = BytesIO(temp_file.read())
 
         temp_directory.cleanup()
-        temp_file.close()
         return True
 
     def encrypt(self) -> BytesIO:

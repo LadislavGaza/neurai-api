@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 import api.deps.schema as s
 from api.db import crud
 from api.deps import utils
+from api.deps import upload
 from api.deps.upload import mri_upload, mri_auto_annotate
 from api.deps.auth import validate_api_token, validate_drive_token
 from api.deps.utils import APIException, get_localization_data
@@ -131,7 +132,7 @@ async def screening_files(
     service = build("drive", "v3", credentials=creds)
     folder_id = utils.get_drive_folder_id(service, translation)
     # list the folder content
-    files = utils.get_drive_folder_content(service, folder_id)
+    files = upload.get_drive_folder_content(service, folder_id)
 
     user = await crud.get_user_by_id(user_id)
     mri_files = await utils.get_mri_files_and_annotations_per_screening(

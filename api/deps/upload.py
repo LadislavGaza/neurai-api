@@ -9,14 +9,62 @@ from google.auth.api_key import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from azure.ai.ml import MLClient, Input
-from azure.ai.ml.entities import Model, Data
-from azure.ai.ml.constants import AssetTypes
-from azure.identity import DefaultAzureCredential
-
 from api.db import crud
-from api.deps.utils import get_drive_folder_id
+from api.deps import const
+from api.deps import utils
+from api.deps import inference
 from api.deps.mri_file import MRIFile
+
+
+def drive_folder_id(service):
+    # get folder_id for NeurAI folder
+    results = service.files().list(
+        q=const.GoogleAPI.CONTENT_FILTER,
+        fields="nextPageToken, files(id, name)"
+    ).execute()
+    items = results.get("files", [])
+    if not items:
+        return None
+
+    folder_id = items[0]["id"]
+    return folder_id
+
+
+def drive_upload(refresh_token: str) -> MRIFile:
+    web_creds = const.GoogleAPI.CREDS["web"]
+    creds = Credentials(
+        None,
+        refresh_token=refresh_token,
+        token_uri=web_creds["token_uri"],
+        client_id=web_creds["client_id"],
+        client_secret=web_creds["client_secret"],
+        scopes=const.GoogleAPI.SCOPES,
+    )
+    service = build("drive", "v3", credentials=creds)
+    folder_id = drive_folder_id(service)
+    uploaded_file = mri.upload_encrypted(service, folder_id)
+
+    return uploaded_file
+
+
+def get_drive_folder_content(service, folder_id):
+    files = []
+    page_token = None
+
+    while True:
+        response = service.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="nextPageToken, files(id, name)",
+            pageToken=page_token
+        ).execute()
+        
+        files.extend(response.get("files", []))
+        page_token = response.get("nextPageToken", None)
+
+        if page_token is None:
+            break
+    
+    return files
 
 
 def create_nifti(files: List[UploadFile], translation) -> MRIFile:
@@ -59,7 +107,7 @@ def create_nifti(files: List[UploadFile], translation) -> MRIFile:
 def file_upload(files: List[UploadFile], creds: Credentials, translation) -> dict:
     mri = create_nifti(files, translation)
     service = build("drive", "v3", credentials=creds)
-    folder_id = get_drive_folder_id(service, translation)
+    folder_id = utils.get_drive_folder_id(service, translation)
 
     try:
         uploaded_file = mri.upload_encrypted(service, folder_id)
@@ -136,13 +184,6 @@ async def mri_auto_annotate(
     translation
 ):
     mri_id = upload_file["id"]
-    # TODO: Try login with tennant ID
-    ml = MLClient(
-        DefaultAzureCredential(),
-        os.environ.get("AZURE_ML_SUBSCRIPTION_ID"),
-        os.environ.get("AZURE_ML_RESOURCE_GROUP"),
-        os.environ.get("AZURE_ML_WORKSPACE")
-    )
 
     try:
         annotation_id = await crud.create_annotation_file(
@@ -157,23 +198,5 @@ async def mri_auto_annotate(
             content={"message": translation["annotation_name_exists"]}
         )
 
-
-    with tempfile.NamedTemporaryFile(suffix=".nii.gz") as nifti:
-        path = os.path.join(tempfile.gettempdir(), nifti.name)
-        print(path, flush=True)
-        scan = mri["content"].getbuffer()
-        print(scan, flush=True)
-        nifti.write(scan)
-
-        source = Data(path=path, type=AssetTypes.URI_FILE)
-        print(source, flush=True)
-        data = ml_client.data.create_or_update(source)
-        print(data, flush=True)
-
-        input_file = Input(type=AssetTypes.URI_FILE, path=data.id)
-        job = ml.batch_endpoints.invoke(
-            endpoint_name=os.environ.get("AZURE_ML_ENDPOINT"),
-            inputs={"file": input_file}
-        )
-
-    await crud.start_annotation_inference(annotation_id, job.name)
+    job_name = inference.launch(mri["content"])
+    await crud.start_inference(annotation_id, job_name)

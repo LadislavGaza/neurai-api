@@ -17,6 +17,7 @@ from googleapiclient.discovery import build
 import api.deps.schema as s
 from api.db import crud
 from api.deps import utils
+from api.deps import upload
 from api.deps.upload import annotation_upload
 from api.deps.utils import APIException, get_localization_data
 from api.deps.auth import validate_api_token, validate_drive_token
@@ -81,9 +82,13 @@ async def upload_annotation(
         name=name,
         translation=translation
     )
-    return {"id": new_file[0]["id"]}
+    return {"id": new_file["id"]}
 
 
+# do annotations pridat fieldy:
+# - is_ai boolean NOT NULL
+# - job-name string NULLABLE - NEPOSIELAT NA FE !!! -> zmenit na status = progress / completed
+# - visible
 @router.get(
     "/{id}/annotations",
     response_model=List[s.Annotation]
@@ -97,7 +102,7 @@ async def annotations(
     service = build("drive", "v3", credentials=creds)
     folder_id = utils.get_drive_folder_id(service, translation)
     # get gdrive folder content
-    files = utils.get_drive_folder_content(service, folder_id)
+    files = upload.get_drive_folder_content(service, folder_id)
 
     annotations_list = await crud.get_annotations_by_mri_and_user(id, user_id)
 

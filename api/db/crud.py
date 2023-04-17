@@ -113,10 +113,10 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, screenin
 
 
 async def create_annotation_file(
-        name: str,
-        patient_id: str,
-        user_id: int,
-        mri_id: int
+    name: str,
+    patient_id: str,
+    user_id: int,
+    mri_id: int
 ) -> int:
     async with AsyncSession(m.engine) as session:
         if name:
@@ -212,7 +212,8 @@ async def delete_annotation(id: int):
 async def update_annotation_file(
     id: int,
     filename: str,
-    file_id: str
+    file_id: str,
+    job_name: str = None
 ):
     async with AsyncSession(m.engine) as session:
         stmt = (
@@ -220,7 +221,8 @@ async def update_annotation_file(
             .where(m.Annotation.id == id)
             .values({
                 "filename": filename,
-                "file_id": file_id
+                "file_id": file_id,
+                "job_name": job_name
             })
         )
         await session.execute(stmt)
@@ -228,8 +230,8 @@ async def update_annotation_file(
 
 
 async def update_annotation_name(
-        id: int,
-        name: str,
+    id: int,
+    name: str,
 ):
     async with AsyncSession(m.engine) as session:
         stmt = (
@@ -240,10 +242,8 @@ async def update_annotation_name(
         await session.execute(stmt)
         await session.commit()
 
-async def start_annotation_inference(
-    id: int,
-    job: str,
-):
+
+async def start_inference(id: int, job: str):
     async with AsyncSession(m.engine) as session:
         stmt = (
             update(m.Annotation)
@@ -254,17 +254,24 @@ async def start_annotation_inference(
         await session.commit()
 
 
-async def update_mri_name(
-        id: int,
-        name: str,
-):
+async def get_running_inferences():
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Annotation.job_name)
+            .where(m.Annotation.job_name != None)
+            .options(subqueryload(m.Annotation.creator))
+        )
+        result = await session.execute(query)
+
+    return result.scalars().all()
+
+
+async def update_mri_name(id: int, name: str):
     async with AsyncSession(m.engine) as session:
         stmt = (
             update(m.MRIFile)
             .where(m.MRIFile.id == id)
-            .values({
-                "filename": name
-            })
+            .values({"filename": name})
         )
         await session.execute(stmt)
         await session.commit()
