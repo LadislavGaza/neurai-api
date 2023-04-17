@@ -1,4 +1,4 @@
-fastapi==0.85.0
+fastapi==0.95.1
 gunicorn==20.1.0
 uvicorn==0.18.3
 SQLAlchemy==2.0.4
@@ -19,3 +19,5 @@ nibabel==4.0.2
 dicom2nifti==2.4.6
 requests==2.27.1
 jinja2==3.1.2
+azure-ai-ml==1.5.0
+rocketry==2.5.1

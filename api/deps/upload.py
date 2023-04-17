@@ -1,3 +1,4 @@
+import os
 import uuid
 from typing import List
 
@@ -7,6 +8,11 @@ from sqlalchemy.exc import IntegrityError
 from google.auth.api_key import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+from azure.ai.ml import MLClient, Input
+from azure.ai.ml.entities import Model, Data
+from azure.ai.ml.constants import AssetTypes
+from azure.identity import DefaultAzureCredential
 
 from api.db import crud
 from api.deps.utils import get_drive_folder_id
@@ -39,7 +45,7 @@ def create_nifti(files: List[UploadFile], translation) -> MRIFile:
                 )
             dicom_files.append(mri)
     
-        mri = MRIFile(filename=uuid.uuid4(), content=None)
+        mri = MRIFile(filename=str(uuid.uuid4()), content=None)
         result = mri.from_dicom(dicom_files)
         if result is False:
             raise APIException(
@@ -51,9 +57,9 @@ def create_nifti(files: List[UploadFile], translation) -> MRIFile:
 
 
 def file_upload(files: List[UploadFile], creds: Credentials, translation) -> dict:
+    mri = create_nifti(files, translation)
     service = build("drive", "v3", credentials=creds)
     folder_id = get_drive_folder_id(service, translation)
-    mri = create_nifti(files, translation)
 
     try:
         uploaded_file = mri.upload_encrypted(service, folder_id)
@@ -80,7 +86,7 @@ async def annotation_upload(
     translation
 ):
     try:
-        id = await crud.create_annotation_file(
+        annotation_id = await crud.create_annotation_file(
             name=name,
             mri_id=mri_id,
             patient_id=patient_id,
@@ -89,16 +95,16 @@ async def annotation_upload(
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"message": translation["annotation_name_exists"]},
+            content={"message": translation["annotation_name_exists"]}
         )
 
     new_file = await file_upload(files, creds, translation)
     await crud.update_annotation_file(
-        id=id,
+        id=annotation_id,
         filename=new_file["name"],
         file_id=new_file["id"]
     )
-    new_file["id"] = id
+    new_file["id"] = annotation_id
 
     return new_file
 
@@ -123,32 +129,51 @@ async def mri_upload(
     return new_file
 
 
-async def mri_auto_annotate(upload_file: dict, user_id: int):
-    pass
-    # TODO: Send NIfTI to Azure ML 
-    # create empty annotations, get id as filename - m.Annotation()
+async def mri_auto_annotate(
+    upload_file: dict, 
+    mri_id: int,
+    patient_id: int,
+    user_id: int,
+    translation
+):
+    # TODO: Try login with tennant ID
+    ml = MLClient(
+        DefaultAzureCredential(),
+        os.environ.get("AZURE_ML_SUBSCRIPTION_ID"),
+        os.environ.get("AZURE_ML_RESOURCE_GROUP"),
+        os.environ.get("AZURE_ML_WORKSPACE")
+    )
 
-    # from azure.ai.ml import MLClient, Input
-    # from azure.ai.ml.entities import BatchEndpoint, BatchDeployment, Model, AmlCompute, Data, BatchRetrySettings
-    # from azure.ai.ml.constants import AssetTypes, BatchDeploymentOutputAction
-    # from azure.identity import DeviceCodeCredential
+    try:
+        annotation_id = await crud.create_annotation_file(
+            name="AI maska",
+            mri_id=mri_id,
+            patient_id=patient_id,
+            user_id=user_id,
+        )
+    except IntegrityError:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": translation["annotation_name_exists"]}
+        )
 
-    # ml_client = MLClient(
-    #   DeviceCodeCredential(), 
-    #   os.environ,get("AZURE_ML_SUBSCRIPTION_ID"), 
-    #   os.environ.get("AZURE_ML_RESOURCE_GROUP",
-    #   os.environ.get("AZURE_ML_WORKSPACE")
-    # )
-    # with tempfile.NamedTemporaryFile(suffix=".nii.gz") as nifti: # Create recogisable name (fixed name out)
-    #       nifti.write(mri["content"].getbuffer())
-    #       path = os.path.join(tempfile.gettempdir(), nifti.name)
-    #
-    #       my_data = Data(path=path, type=AssetTypes.URI_FILE)
-    #       data = ml_client.data.create_or_update(my_data)
-    # 
-    # input_file = Input(type=AssetTypes.URI_FILE, path=data.id)
-    # job = ml_client.batch_endpoints.invoke(
-    #     endpoint_name=os.environ.get("AZURE_ML_ENDPOINT"),
-    #     inputs={"file": input_file}
-    # )
-    # UPDATE annotations <= job.name
+
+    with tempfile.NamedTemporaryFile(suffix=".nii.gz") as nifti:
+        path = os.path.join(tempfile.gettempdir(), nifti.name)
+        print(path, flush=True)
+        scan = mri["content"].getbuffer()
+        print(scan, flush=True)
+        nifti.write(scan)
+
+        source = Data(path=path, type=AssetTypes.URI_FILE)
+        print(source, flush=True)
+        data = ml_client.data.create_or_update(source)
+        print(data, flush=True)
+
+        input_file = Input(type=AssetTypes.URI_FILE, path=data.id)
+        job = ml.batch_endpoints.invoke(
+            endpoint_name=os.environ.get("AZURE_ML_ENDPOINT"),
+            inputs={"file": input_file}
+        )
+
+    await crud.start_annotation_inference(annotation_id, job.name)

@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 import api.deps.schema as s
 from api.db import crud
 from api.deps import utils
-from api.deps.upload import mri_upload
+from api.deps.upload import mri_upload, mri_auto_annotate
 from api.deps.auth import validate_api_token, validate_drive_token
 from api.deps.utils import APIException, get_localization_data
 
@@ -190,13 +190,10 @@ async def upload_mri(
         )
 
     mri = await mri_upload(
-        files=files,
-        creds=creds,
-        patient_id=screening.patient_id,
-        screening_id=screening_id,
-        user_id=user_id,
-        translation=translation
+        files, creds, screening.patient_id, screening_id, user_id, translation
     )
-    # await utils.mri_auto_annotate(mri, user_id)
+    await mri_auto_annotate(
+        mri["id"], screening.patient_id, user_id, translation
+    )
 
     return {"mri_files": [new_file]}

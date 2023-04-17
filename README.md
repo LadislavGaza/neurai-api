@@ -37,6 +37,12 @@ export DB_URL="sqlite+aiosqlite:///site_api/sqlite/neurai.db"
 alembic -c site_api/config/alembic.ini revision --autogenerate -m "message"
 ```
 
+### Login to Azure ML
+App has to be authorized with:
+```bash
+az login --use-device-code
+```
+
 
 #### Run migrations
 

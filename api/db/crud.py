@@ -117,7 +117,7 @@ async def create_annotation_file(
         patient_id: str,
         user_id: int,
         mri_id: int
-):
+) -> int:
     async with AsyncSession(m.engine) as session:
         if name:
             annotation_name = name
@@ -235,9 +235,20 @@ async def update_annotation_name(
         stmt = (
             update(m.Annotation)
             .where(m.Annotation.id == id)
-            .values({
-                "name": name
-            })
+            .values({"name": name})
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+async def start_annotation_inference(
+    id: int,
+    job: str,
+):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.Annotation)
+            .where(m.Annotation.id == id)
+            .values({"job_name": job})
         )
         await session.execute(stmt)
         await session.commit()
