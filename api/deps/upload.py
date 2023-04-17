@@ -1,4 +1,3 @@
-import os
 import uuid
 from typing import List
 
@@ -14,6 +13,7 @@ from api.deps import const
 from api.deps import utils
 from api.deps import inference
 from api.deps.mri_file import MRIFile
+from api.deps.utils import APIException
 
 
 def drive_folder_id(service):
@@ -30,7 +30,7 @@ def drive_folder_id(service):
     return folder_id
 
 
-def drive_upload(refresh_token: str) -> MRIFile:
+def drive_upload(mri: MRIFile, refresh_token: str) -> dict:
     web_creds = const.GoogleAPI.CREDS["web"]
     creds = Credentials(
         None,
@@ -47,6 +47,19 @@ def drive_upload(refresh_token: str) -> MRIFile:
     return uploaded_file
 
 
+def get_drive_folder_id(service, translation):
+    folder_id = drive_folder_id(service)
+
+    # if NeurAI folder doesn't exist we need to retry authorization
+    if folder_id is None:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": translation["drive_folder_not_found"]},
+        )
+
+    return folder_id
+
+
 def get_drive_folder_content(service, folder_id):
     files = []
     page_token = None
@@ -57,13 +70,13 @@ def get_drive_folder_content(service, folder_id):
             fields="nextPageToken, files(id, name)",
             pageToken=page_token
         ).execute()
-        
+
         files.extend(response.get("files", []))
         page_token = response.get("nextPageToken", None)
 
         if page_token is None:
             break
-    
+
     return files
 
 
@@ -92,7 +105,7 @@ def create_nifti(files: List[UploadFile], translation) -> MRIFile:
                     },
                 )
             dicom_files.append(mri)
-    
+
         mri = MRIFile(filename=str(uuid.uuid4()), content=None)
         result = mri.from_dicom(dicom_files)
         if result is False:
@@ -107,7 +120,7 @@ def create_nifti(files: List[UploadFile], translation) -> MRIFile:
 def file_upload(files: List[UploadFile], creds: Credentials, translation) -> dict:
     mri = create_nifti(files, translation)
     service = build("drive", "v3", credentials=creds)
-    folder_id = utils.get_drive_folder_id(service, translation)
+    folder_id = get_drive_folder_id(service, translation)
 
     try:
         uploaded_file = mri.upload_encrypted(service, folder_id)
@@ -198,5 +211,5 @@ async def mri_auto_annotate(
             content={"message": translation["annotation_name_exists"]}
         )
 
-    job_name = inference.launch(mri["content"])
+    job_name = inference.launch(upload_file["content"])
     await crud.start_inference(annotation_id, job_name)

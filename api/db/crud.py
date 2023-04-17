@@ -257,7 +257,7 @@ async def start_inference(id: int, job: str):
 async def get_running_inferences():
     async with AsyncSession(m.engine) as session:
         query = (
-            select(m.Annotation.job_name)
+            select(m.Annotation)
             .where(m.Annotation.job_name != None)
             .options(subqueryload(m.Annotation.creator))
         )

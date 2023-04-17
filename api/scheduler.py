@@ -1,4 +1,3 @@
-import asyncio
 from rocketry import Rocketry
 from rocketry.conds import every
 
@@ -19,7 +18,6 @@ async def check_done_inference():
         if mri is not None:
             refresh_token = annotation.creator.refresh_token
             uploaded_file = upload.drive_upload(mri, refresh_token)
-            uploaded_file = mri.upload_encrypted(service, folder_id)
 
             await crud.update_annotation_file(
                 id=annotation.id,

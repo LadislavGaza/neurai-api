@@ -5,7 +5,7 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 
 from api.db import crud
-from api.deps import utils, const
+from api.deps import utils, upload, const
 from api.deps.auth import (
     validate_api_token, validate_drive_token
 )
@@ -92,7 +92,7 @@ async def drive_get_files(
 ):
     service = build("drive", "v3", credentials=creds)
 
-    folder_id = utils.get_drive_folder_id(service, translation)
+    folder_id = upload.get_drive_folder_id(service, translation)
     q = f"'{folder_id}' in parents and trashed=false"
 
     # list the folder content

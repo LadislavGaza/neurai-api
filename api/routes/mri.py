@@ -100,7 +100,7 @@ async def annotations(
     translation=Depends(get_localization_data)
 ):
     service = build("drive", "v3", credentials=creds)
-    folder_id = utils.get_drive_folder_id(service, translation)
+    folder_id = upload.get_drive_folder_id(service, translation)
     # get gdrive folder content
     files = upload.get_drive_folder_content(service, folder_id)
 

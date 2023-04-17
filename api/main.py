@@ -14,21 +14,21 @@ UVICORN_CONFIG = uvicorn.Config(
     app=app_fastapi,
     host="0.0.0.0",
     port=8080,
-    workers=1,  # multiprocessing.cpu_count() * 2 + 1
+    workers=1, #multiprocessing.cpu_count() * 2 + 1,
     reload=True,
     loop="asyncio",
     log_level="debug"
 )
 
+
 class Server(uvicorn.Server):
- 
+
     def handle_exit(self, sig: int, frame) -> None:
         app_rocketry.session.shut_down()
         return super().handle_exit(sig, frame)
 
 
 async def main():
-    # TODO: use gunicorn
     server = Server(config=UVICORN_CONFIG)
 
     api = asyncio.create_task(server.serve())

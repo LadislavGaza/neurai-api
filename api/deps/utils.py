@@ -2,13 +2,10 @@ import json
 import logging
 from random import choices
 import string
-from typing import List
 from fastapi import status, Request
 
 from api.db import crud
 from api.deps import const
-from api.deps import upload
-from api.deps.mri_file import MRIFile
 
 
 class APIException(Exception):
@@ -34,7 +31,7 @@ async def get_mri_files_and_annotations_per_screening(user, files, screening_id)
                 mri_id=file.id, user_id=user.id
             )
 
-            # verify annotation presence in drive 
+            # verify annotation presence in drive
             annotations = get_annotations_per_user(annotations, files)
             mri_files.append({
                 "id": file.id,
@@ -51,19 +48,6 @@ def generate_unique_patient_id():
     return ''.join(choices(string.ascii_uppercase + string.digits, k=10))
 
 
-def get_drive_folder_id(service, translation):
-    folder_id = upload.drive_folder_id(service)
-
-    # if NeurAI folder doesn't exist we need to retry authorization
-    if folder_id is None:
-        raise APIException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": translation["drive_folder_not_found"]},
-        )
-
-    return folder_id
-
-
 def get_annotations_per_user(annotations, files):
     annotation_files = []
     drive_file_ids = [record["id"] for record in files]
@@ -73,7 +57,7 @@ def get_annotations_per_user(annotations, files):
                 "id": file.id,
                 "name": file.name
             })
-    
+
     return annotation_files
 
 

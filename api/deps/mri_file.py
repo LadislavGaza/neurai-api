@@ -4,7 +4,6 @@ from gzip import compress
 from pathlib import Path
 from typing import List
 
-from fastapi import status
 from fastapi import UploadFile
 from googleapiclient.http import MediaIoBaseUpload
 from buffered_encryption.aesctr import (
@@ -40,7 +39,7 @@ class MRIFile:
         try:
             dcmread(self.content)
             return True
-        except InvalidDicomError as e:
+        except InvalidDicomError:
             return False
 
     def from_nifti(self) -> bool:
@@ -48,7 +47,7 @@ class MRIFile:
             return False
 
         self.content.seek(0)
-        self.content = BytesIO(compress(nifti.content.read()))
+        self.content = BytesIO(compress(self.content.read()))
         return True
 
     def from_dicom(self, dicom_files: List["MRIFile"]) -> bool:
