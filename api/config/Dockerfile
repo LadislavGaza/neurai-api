@@ -17,6 +17,8 @@ COPY api ./api
 RUN pip install -r api/config/requirements.txt
 
 EXPOSE 8080
+CMD ["python", "-m", "api.main"]
+
 # CMD [                                       \
 #     "gunicorn",                             \
 #     "-k", "uvicorn.workers.UvicornWorker",  \
@@ -24,4 +26,4 @@ EXPOSE 8080
 #     "api.main:app"                          \
 # ]
 
-ENTRYPOINT ["/bin/sh", "-c" , "alembic -c api/config/alembic.ini -x data=true upgrade head && gunicorn -k uvicorn.workers.UvicornWorker -c api/config/gunicorn.conf.py api.main:app"]
+# ENTRYPOINT ["/bin/sh", "-c" , "alembic -c api/config/alembic.ini -x data=true upgrade head && gunicorn -k uvicorn.workers.UvicornWorker -c api/config/gunicorn.conf.py api.main:app"]

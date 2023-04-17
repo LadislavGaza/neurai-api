@@ -193,7 +193,7 @@ async def upload_mri(
         files, creds, screening.patient_id, screening_id, user_id, translation
     )
     await mri_auto_annotate(
-        mri["id"], screening.patient_id, user_id, translation
+        mri, screening.patient_id, user_id, translation
     )
 
     return {"mri_files": [new_file]}

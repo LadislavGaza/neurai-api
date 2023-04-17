@@ -8,8 +8,6 @@ from fastapi import status, Request
 from api.db import crud
 from api.deps import const
 
-import api.main as main
-
 
 class APIException(Exception):
     status_code = None
@@ -120,8 +118,8 @@ def get_localization_data(request: Request):
     accepted_language = request.headers.get("Accept-Language")
 
     translation = None
-    if not accepted_language or accepted_language not in main.app_languages:
-        accepted_language = main.language_fallback
+    if not accepted_language or accepted_language not in const.I18n.LANGUAGES:
+        accepted_language = const.I18n.DEFAULT_LANGUAGE
 
     if accepted_language == "en":
         translation = open("api/lang/en.json", "r")

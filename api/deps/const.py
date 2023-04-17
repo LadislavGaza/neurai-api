@@ -33,6 +33,10 @@ class CORS:
         "http://localhost:4040"
     ]
 
+class I18n:
+    LANGUAGES = ["sk", "en"]
+    DEFAULT_LANGUAGE = "sk"
+
 
 class ENC:
     KEY = base64.b64decode(bytes(os.environ.get("ENC_KEY"), "utf-8"))

@@ -130,12 +130,12 @@ async def mri_upload(
 
 
 async def mri_auto_annotate(
-    upload_file: dict, 
-    mri_id: int,
+    upload_file: dict,
     patient_id: int,
     user_id: int,
     translation
 ):
+    mri_id = upload_file["id"]
     # TODO: Try login with tennant ID
     ml = MLClient(
         DefaultAzureCredential(),
