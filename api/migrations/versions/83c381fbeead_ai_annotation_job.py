@@ -17,9 +17,11 @@ depends_on = None
 
 def upgrade():
     op.add_column('annotations', sa.Column('is_ai', sa.Boolean(), nullable=False, default=False))
+    op.add_column('annotations', sa.Column('visible', sa.Boolean(), nullable=False, default=False))
     op.add_column('annotations', sa.Column('job_name', sa.String(), nullable=True))
 
 
 def downgrade():
     op.drop_column('annotations', 'job_name')
+    op.drop_column('annotations', 'visible')
     op.drop_column('annotations', 'is_ai')
