@@ -176,8 +176,8 @@ async def mri_upload(
     files: List[UploadFile],
     creds: Credentials,
     patient_id: str,
-    user_id: int,
     screening_id: int,
+    user_id: int,
     translation
 ):
     new_file = file_upload(files, creds, translation)
