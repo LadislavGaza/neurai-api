@@ -160,7 +160,7 @@ async def annotation_upload(
             content={"message": translation["annotation_name_exists"]}
         )
 
-    new_file = await file_upload(files, creds, translation)
+    new_file = file_upload(files, creds, translation)
     await crud.update_annotation_file(
         id=annotation_id,
         filename=new_file["name"],
