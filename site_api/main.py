@@ -25,6 +25,8 @@ from site_api.deps import const
 from site_api.db import crud
 import site_api.deps.schema as s
 from site_api.deps.utils import get_localization_data
+from site_api.deps.pacs import PACSClient
+
 
 log = const.LOGGING()
 dictConfig(log.CONFIG)
@@ -213,3 +215,14 @@ async def patient_screenings(
         s.PatientDetail.from_orm(patient).dict()
     )
     return response_files
+
+
+@app.get("/pacs/patients", response_model=List[s.HospitalStoragePatient])
+async def pacs_search(
+    search: s.HostitalStorageSearch = Depends(),
+    authorization: str | None = Header(default=None)
+):
+    pacs = PACSClient(const.PACS.IP, const.PACS.PORT, const.PACS.AE_TITLE)
+    results = pacs.search(vars(search))
+    # TODO: check if patient, study, series are already imported in "api" database
+    return results

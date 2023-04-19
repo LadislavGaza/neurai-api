@@ -1,0 +1,16 @@
+{
+    "DicomServerEnabled" : true,
+    "Name": "PACS",
+    "HttpPort": 8010,
+    "DicomAet": "PACS",
+    "DicomPort": 11112,
+    "DicomAlwaysAllowEcho" : true,
+    "DicomAlwaysAllowStore" : true,
+    "DicomAlwaysAllowFind" : true,
+    "DicomAlwaysAllowFindWorklist" : true,
+    "DicomAlwaysAllowGet" : true,
+    "DicomAlwaysAllowMove" : true,
+    "RegisteredUsers": {
+        "admin": "admin"
+    }
+}

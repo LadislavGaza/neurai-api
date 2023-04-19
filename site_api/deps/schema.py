@@ -58,3 +58,37 @@ class ScreeningInfo(BaseModel):
 class PatientDetailScreenings(BaseModel):
     patient: Patient
     screenings: List[ScreeningInfo]
+
+
+class HospitalMRI(BaseModel):
+    uid: str
+    filename: str | None
+    description: str | None
+    created_at: datetime | None
+
+
+class HospitalScreening(BaseModel):
+    uid: str
+    description: str | None
+    performed_at: datetime | None
+    mri_files: List[HospitalMRI]
+
+
+class HospitalStoragePatient(BaseModel):
+    id: str
+    name: str
+    birth_date: date | None
+
+    screenings: List[HospitalScreening]
+
+
+class HostitalStorageSearch:
+    def __init__(
+        self,
+        id: str | None = None,
+        name: str | None = None,
+        birth_date: date | None = None
+    ):
+        self.PatientID = id
+        self.PatientName = name
+        self.PatientBirthDate = birth_date
