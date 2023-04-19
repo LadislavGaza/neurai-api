@@ -25,5 +25,6 @@ async def check_done_inference():
                 filename=uploaded_file["name"],
                 file_id=uploaded_file["id"],
                 is_ai=True,
+                visible=False,
                 job_name=None       # Mark job as finished
             )

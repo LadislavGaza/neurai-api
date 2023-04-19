@@ -53,10 +53,7 @@ def get_annotations_per_user(annotations, files):
     drive_file_ids = [record["id"] for record in files]
     for file in annotations:
         if file.file_id in drive_file_ids:
-            annotation_files.append({
-                "id": file.id,
-                "name": file.name
-            })
+            annotation_files.append(file)
 
     return annotation_files
 

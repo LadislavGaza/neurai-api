@@ -164,7 +164,8 @@ async def annotation_upload(
         id=annotation_id,
         filename=new_file["name"],
         file_id=new_file["id"],
-        is_ai=False
+        is_ai=False,
+        visible=True
     )
     new_file["id"] = annotation_id
 

@@ -186,3 +186,7 @@ class Annotation(Base):
     mri_file = relationship(
         MRIFile, foreign_keys=[mri_file_id], back_populates='annotations'
     )
+
+    @property
+    def ready(self):
+        return self.job_name == None

@@ -48,7 +48,7 @@ async def load_mri_file(id: int, creds=Depends(validate_drive_token)):
 )
 async def rename_mri(
     mri_id: int,
-    mri: s.RenameAnnotationMRI,
+    mri: s.RenameMRI,
     user_id: int = Depends(validate_api_token),
     translation=Depends(get_localization_data)
 ):
@@ -86,10 +86,6 @@ async def upload_annotation(
     return {"id": new_file["id"]}
 
 
-# do annotations pridat fieldy:
-# - is_ai boolean NOT NULL
-# - job-name string NULLABLE - NEPOSIELAT NA FE !!! -> zmenit na status = progress / completed
-# - visible
 @router.get(
     "/{id}/annotations",
     response_model=List[s.Annotation]
@@ -122,12 +118,19 @@ async def load_annotation(
 ):
     service = build("drive", "v3", credentials=creds)
     f_e = MRIFile(filename="", content="")
+
     annotation = await crud.get_annotation_by_id(annotation_id)
     if annotation is None:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
             content={"message": translation["annotation_not_found"]},
         )
+    if annotation.ready is False:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": translation["annotation_not_ready"]},
+        )
+
     f_e.download_decrypted(service, annotation.file_id)
 
     return base64.b64encode(f_e.content)
@@ -168,10 +171,10 @@ async def remove_annotation(
     response_model=s.AnnotationFiles,
     dependencies=[Depends(validate_api_token)]
 )
-async def rename_annotation(
+async def change_annotation(
     mri_id: int,
     annotation_id: int,
-    annotation: s.RenameAnnotationMRI,
+    annotation: s.AnnotationEdit,
     user_id: int = Depends(validate_api_token),
     translation=Depends(get_localization_data)
 ):
@@ -182,7 +185,9 @@ async def rename_annotation(
         translation
     )
     try:
-        await crud.update_annotation_name(annotation_id, annotation.name)
+        annotation = annotation.dict(exclude_none=True, exclude_unset=True)
+        await crud.update_annotation_details(annotation_id, annotation)
+
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
