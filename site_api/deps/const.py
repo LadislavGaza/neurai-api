@@ -19,6 +19,12 @@ class CORS:
     ]
 
 
+class PACS:
+    IP = os.environ.get("PACS_IP")
+    PORT = int(os.environ.get("PACS_PORT"))
+    AE_TITLE = os.environ.get("PACS_AE_TITLE")
+
+
 class LOGGING:
     MAX_SIZE_BYTES = 20000000
     ROTATIONS = 5
