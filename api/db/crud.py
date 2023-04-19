@@ -116,7 +116,8 @@ async def create_annotation_file(
     name: str,
     patient_id: str,
     user_id: int,
-    mri_id: int
+    mri_id: int,
+    is_ai: bool
 ) -> int:
     async with AsyncSession(m.engine) as session:
         if name:
@@ -140,6 +141,8 @@ async def create_annotation_file(
             name=annotation_name,
             patient_id=patient_id,
             mri_file_id=mri_id,
+            is_ai=is_ai,
+            visible=False,
             created_by=user_id,
             modified_by=user_id
         )
@@ -213,7 +216,6 @@ async def update_annotation_file(
     id: int,
     filename: str,
     file_id: str,
-    is_ai: bool,
     visible: bool,
     job_name: str = None,
 ):
@@ -224,7 +226,6 @@ async def update_annotation_file(
             .values({
                 "filename": filename,
                 "file_id": file_id,
-                "is_ai": is_ai,
                 "visible": visible,
                 "job_name": job_name
             })

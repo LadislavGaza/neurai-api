@@ -152,6 +152,7 @@ async def annotation_upload(
             mri_id=mri_id,
             patient_id=patient_id,
             user_id=user_id,
+            is_ai=False
         )
     except IntegrityError:
         raise APIException(
@@ -164,7 +165,6 @@ async def annotation_upload(
         id=annotation_id,
         filename=new_file["name"],
         file_id=new_file["id"],
-        is_ai=False,
         visible=True
     )
     new_file["id"] = annotation_id
@@ -206,6 +206,7 @@ async def mri_auto_annotate(
             mri_id=mri_id,
             patient_id=patient_id,
             user_id=user_id,
+            is_ai=True
         )
     except IntegrityError:
         raise APIException(
