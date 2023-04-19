@@ -1,5 +1,7 @@
 import json
 import logging
+import tempfile
+from pathlib import Path
 from logging.config import dictConfig
 from typing import List
 
@@ -226,3 +228,22 @@ async def pacs_search(
     results = pacs.search(vars(search))
     # TODO: check if patient, study, series are already imported in "api" database
     return results
+
+
+@app.post("/pacs/mri")
+async def pacs_export(
+    mri_file_uids: List[str],
+    authorization: str | None = Header(default=None)
+):
+    pacs = PACSClient(const.PACS.IP, const.PACS.PORT, const.PACS.AE_TITLE)
+
+    for uid in mri_file_uids:
+        temp_directory = tempfile.TemporaryDirectory()
+        temp_dir_path = Path(temp_directory.name)  
+        pacs.download(uid, temp_dir_path)
+        # TODO: Upload MRI via API (add optional UID fields)
+        # TODO: Create associated patient and study in API
+        # TODO: response = api_post("/mri", req.json(), authorization)
+        temp_directory.cleanup()
+
+    # TODO: skip patient, study, series already imported in "api" database
