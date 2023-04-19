@@ -4,14 +4,14 @@ from typing import List
 from fastapi import status, UploadFile
 from sqlalchemy.exc import IntegrityError
 
-from google.auth.api_key import Credentials
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from api.db import crud
 from api.deps import const
 from api.deps import utils
-from api.deps import inference
+from api.deps.inference import MLInference
 from api.deps.mri_file import MRIFile
 from api.deps.utils import APIException
 
@@ -163,7 +163,8 @@ async def annotation_upload(
     await crud.update_annotation_file(
         id=annotation_id,
         filename=new_file["name"],
-        file_id=new_file["id"]
+        file_id=new_file["id"],
+        is_ai=False
     )
     new_file["id"] = annotation_id
 
@@ -200,7 +201,7 @@ async def mri_auto_annotate(
 
     try:
         annotation_id = await crud.create_annotation_file(
-            name="AI maska",
+            name=const.ANNOT_MASK_AI,
             mri_id=mri_id,
             patient_id=patient_id,
             user_id=user_id,
@@ -211,5 +212,7 @@ async def mri_auto_annotate(
             content={"message": translation["annotation_name_exists"]}
         )
 
-    job_name = inference.launch(upload_file["content"])
+    ml = MLInference()
+    job_name = ml.launch(upload_file["content"])
+
     await crud.start_inference(annotation_id, job_name)

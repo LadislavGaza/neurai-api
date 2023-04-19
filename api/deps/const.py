@@ -6,6 +6,7 @@ import logging
 
 APP_NAME = "NeurAI"
 ANNOT_MASK = "maska"
+ANNOT_MASK_AI = "AI maska"
 
 
 class JWT:

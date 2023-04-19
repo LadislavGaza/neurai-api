@@ -18,6 +18,7 @@ import api.deps.schema as s
 from api.db import crud
 from api.deps import utils
 from api.deps import upload
+from api.deps.mri_file import MRIFile
 from api.deps.upload import annotation_upload
 from api.deps.utils import APIException, get_localization_data
 from api.deps.auth import validate_api_token, validate_drive_token
@@ -34,7 +35,7 @@ router = APIRouter(
 async def load_mri_file(id: int, creds=Depends(validate_drive_token)):
 
     service = build("drive", "v3", credentials=creds)
-    f_e = utils.MRIFile(filename="", content="")
+    f_e = MRIFile(filename="", content="")
     mri = await crud.get_mri_file_by_id(id)
     f_e.download_decrypted(service, mri.file_id)
 
@@ -120,7 +121,7 @@ async def load_annotation(
     translation=Depends(get_localization_data)
 ):
     service = build("drive", "v3", credentials=creds)
-    f_e = utils.MRIFile(filename="", content="")
+    f_e = MRIFile(filename="", content="")
     annotation = await crud.get_annotation_by_id(annotation_id)
     if annotation is None:
         raise APIException(

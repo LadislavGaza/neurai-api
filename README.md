@@ -6,8 +6,14 @@ Build with Python language and FastAPI web framework. It runs in ASGI web server
 
 Set correct environment variables by using configuration templates from subfolder. Then run following commands:
 ```bash
-$ docker-compose build
-$ docker-compose up
+docker-compose build
+docker-compose up
+```
+
+Then, app has to be authorized with Azure ML:
+```bash
+docker-compose exec api bash
+(docker)$ az login --use-device-code
 ```
 
 - REST API launches on `localhost:8080`.
@@ -35,12 +41,6 @@ change URL to sqlite file (e.g. https://docs.sqlalchemy.org/en/14/core/engines.h
 pip install -r site_api/config/requirements.txt
 export DB_URL="sqlite+aiosqlite:///site_api/sqlite/neurai.db"
 alembic -c site_api/config/alembic.ini revision --autogenerate -m "message"
-```
-
-### Login to Azure ML
-App has to be authorized with:
-```bash
-az login --use-device-code
 ```
 
 

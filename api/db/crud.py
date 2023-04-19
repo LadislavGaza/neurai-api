@@ -213,7 +213,8 @@ async def update_annotation_file(
     id: int,
     filename: str,
     file_id: str,
-    job_name: str = None
+    is_ai: bool,
+    job_name: str = None,
 ):
     async with AsyncSession(m.engine) as session:
         stmt = (
@@ -222,6 +223,7 @@ async def update_annotation_file(
             .values({
                 "filename": filename,
                 "file_id": file_id,
+                "is_ai": is_ai,
                 "job_name": job_name
             })
         )
@@ -229,15 +231,23 @@ async def update_annotation_file(
         await session.commit()
 
 
-async def update_annotation_name(
-    id: int,
-    name: str,
-):
+async def update_annotation_name(id: int, name: str):
     async with AsyncSession(m.engine) as session:
         stmt = (
             update(m.Annotation)
             .where(m.Annotation.id == id)
             .values({"name": name})
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
+async def update_annotation_visibility(id: int, visible: bool):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.Annotation)
+            .where(m.Annotation.id == id)
+            .values({"visible": visible})
         )
         await session.execute(stmt)
         await session.commit()
