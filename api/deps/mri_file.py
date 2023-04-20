@@ -1,69 +1,80 @@
+import tempfile
 from io import BytesIO
+from gzip import compress
+from pathlib import Path
+from typing import List
 
+from fastapi import UploadFile
 from googleapiclient.http import MediaIoBaseUpload
-from fastapi import status
+from buffered_encryption.aesctr import (
+    EncryptionIterator, ReadOnlyEncryptedFile
+)
 
-from nibabel import FileHolder, Nifti1Image
 from pydicom import dcmread
 from pydicom.errors import InvalidDicomError
 import dicom2nifti
-
-from buffered_encryption.aesctr import EncryptionIterator, ReadOnlyEncryptedFile
-
-from gzip import compress
-import tempfile
-from pathlib import Path
-
-from random import choice
-from string import ascii_lowercase
+from dicom2nifti.exceptions import ConversionValidationError
+from nibabel import FileHolder, Nifti1Image
+from nibabel.spatialimages import HeaderDataError
+from nibabel.wrapstruct import WrapStructError
 
 from api.deps import const
 
 
 class MRIFile:
-    def __init__(self, filename: str, content):
+    def __init__(self, filename: str, content: UploadFile | None = None):
         self.filename = filename
         self.content = content
-        self.is_nifti = False
 
-    def check_file_type(self):
+    def is_nifti(self) -> bool:
         try:
-            dicom_meta = dcmread(self.content)
-            patient_name = dicom_meta.PatientName
-        except InvalidDicomError as e:
-            self.is_nifti = True
-
-        # read nifti file
-        if self.is_nifti:
             fh = FileHolder(fileobj=self.content)
             Nifti1Image.from_file_map({"header": fh, "image": fh})
-            patient_name = None  # nifti doesn"t include patient name
+            return True
+        except (HeaderDataError, WrapStructError):
+            # Invalid header data or wrong block size
+            return False
 
-    def create_valid_series(self, files_length, nifti_file, dicom_files, translation):
-        self.check_file_type()
+    def is_dicom(self) -> bool:
+        try:
+            dcmread(self.content)
+            return True
+        except InvalidDicomError:
+            return False
 
-        if self.is_nifti:
-            if files_length > 1:
-                raise APIException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    content={
-                        "message": translation["more_than_one_scanning_uploaded"]
-                    },
+    def from_nifti(self) -> bool:
+        if not self.is_nifti():
+            return False
+
+        self.content.seek(0)
+        self.content = BytesIO(compress(self.content.read()))
+        return True
+
+    def from_dicom(self, dicom_files: List["MRIFile"]) -> bool:
+        temp_directory = tempfile.TemporaryDirectory()
+        temp_dir_path = Path(temp_directory.name)
+
+        for dicom_file in dicom_files:
+            dicom_file.content.seek(0)
+            temp_bytes = temp_dir_path / dicom_file.filename
+            temp_bytes.write_bytes(dicom_file.content.read())
+
+        with tempfile.NamedTemporaryFile(suffix=".nii.gz") as temp_file:
+            try:
+                dicom2nifti.dicom_series_to_nifti(
+                    temp_dir_path, Path(temp_file.name), reorient_nifti=True
                 )
-            nifti_file = self
-        else:
-            if nifti_file:
-                raise APIException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    content={
-                        "message": translation["more_than_one_scanning_uploaded"]
-                    },
-                )
-            dicom_files.append(self)
+            except ConversionValidationError:
+                # Not enough slices (<4) or inconsistent slice increment
+                return False
 
-        return nifti_file, dicom_files
+            temp_file.seek(0)
+            self.content = BytesIO(temp_file.read())
 
-    def encrypt(self):
+        temp_directory.cleanup()
+        return True
+
+    def encrypt(self) -> BytesIO:
         enc_file = EncryptionIterator(
             self.content,
             const.ENC.KEY,
@@ -75,7 +86,7 @@ class MRIFile:
             cipher_file.write(chunk)
         return cipher_file
 
-    def decrypt(self):
+    def decrypt(self) -> BytesIO:
         with BytesIO(self.content) as file_media_bytes:
             file_media_bytes.seek(0)
             ef = ReadOnlyEncryptedFile(
@@ -83,9 +94,9 @@ class MRIFile:
                 const.ENC.KEY,
                 const.ENC.SIG
             )
-            self.content = ef.read()
+            return ef.read()
 
-    def upload_encrypted(self, service, folder_id):
+    def upload_encrypted(self, service, folder_id) -> dict:
         file_metadata = {
             "name": self.filename,
             "parents": [folder_id]
@@ -100,41 +111,15 @@ class MRIFile:
             media_body=media,
             fields="id,name,createdTime"
         ).execute()
+
         return {
             "id": uploaded_file.get("id"),
             "name": uploaded_file.get("name"),
             "created_at": uploaded_file.get("createdTime"),
-            "modified_at": uploaded_file.get("createdTime")
+            "modified_at": uploaded_file.get("createdTime"),
+            "content": self.content
         }
 
     def download_decrypted(self, service, file_id: str):
         self.content = service.files().get_media(fileId=file_id).execute()
-        self.decrypt()
-
-    def prepare_zipped_nifti(self, nifti_file, dicom_files):
-        self.filename = "".join(choice(ascii_lowercase) for i in range(12))
-        if nifti_file:
-            nifti_file.content.seek(0)
-            self.content = BytesIO(compress(nifti_file.content.read()))
-        else:
-            temp_directory = tempfile.TemporaryDirectory()
-            temp_dir_path = Path(temp_directory.name)
-
-            for dicom_file in dicom_files:
-                dicom_file.content.seek(0)
-                temp_bytes = temp_dir_path / dicom_file.filename
-                temp_bytes.write_bytes(dicom_file.content.read())
-
-            temp_file = tempfile.NamedTemporaryFile(suffix=".nii.gz")
-            dicom2nifti.dicom_series_to_nifti(
-                temp_dir_path,
-                Path(temp_file.name),
-                reorient_nifti=True
-            )
-            temp_file.seek(0)  # this 99% needs to be here
-
-            self.content = BytesIO(temp_file.read())
-
-            temp_directory.cleanup()
-            temp_file.close()
-        self.is_nifti = True
+        self.content = self.decrypt()

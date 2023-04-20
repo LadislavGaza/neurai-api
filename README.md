@@ -6,8 +6,14 @@ Build with Python language and FastAPI web framework. It runs in ASGI web server
 
 Set correct environment variables by using configuration templates from subfolder. Then run following commands:
 ```bash
-$ docker-compose build
-$ docker-compose up
+docker-compose build
+docker-compose up
+```
+
+Then, app has to be authorized with Azure ML:
+```bash
+docker-compose exec api bash
+(docker)$ az login --use-device-code
 ```
 
 - REST API launches on `localhost:8080`.

@@ -59,6 +59,9 @@ class MRIFile(BaseModel):
 class Annotation(BaseModel):
     id: int
     name: str
+    is_ai: bool
+    ready: bool
+    visible: bool
 
     class Config:
         orm_mode = True
@@ -72,9 +75,13 @@ class AnnotationFiles(BaseModel):
     id: str
 
 
-class RenameAnnotationMRI(BaseModel):
+class RenameMRI(BaseModel):
     name: str
 
+
+class AnnotationEdit(BaseModel):
+    name: str | None
+    visible: bool | None
 
 class PatientFiles(BaseModel):
     mri_files: List[MRIFile]

@@ -20,5 +20,6 @@
   "mri_name_exists": "MRI s týmto názvom už existuje",
   "screening_not_found": "Vyšetrenie nebolo nájdené",
   "annotation_not_found": "Anotácia nebola nájdená",
+  "annotation_not_ready": "Anotácia nie je pripravená",
   "screening_name_exists": "Vyšetrenie s týmto názvom už existuje"
 }

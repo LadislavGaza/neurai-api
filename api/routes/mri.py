@@ -17,6 +17,9 @@ from googleapiclient.discovery import build
 import api.deps.schema as s
 from api.db import crud
 from api.deps import utils
+from api.deps import upload
+from api.deps.mri_file import MRIFile
+from api.deps.upload import annotation_upload
 from api.deps.utils import APIException, get_localization_data
 from api.deps.auth import validate_api_token, validate_drive_token
 
@@ -32,7 +35,7 @@ router = APIRouter(
 async def load_mri_file(id: int, creds=Depends(validate_drive_token)):
 
     service = build("drive", "v3", credentials=creds)
-    f_e = utils.MRIFile(filename="", content="")
+    f_e = MRIFile(filename="", content="")
     mri = await crud.get_mri_file_by_id(id)
     f_e.download_decrypted(service, mri.file_id)
 
@@ -45,7 +48,7 @@ async def load_mri_file(id: int, creds=Depends(validate_drive_token)):
 )
 async def rename_mri(
     mri_id: int,
-    mri: s.RenameAnnotationMRI,
+    mri: s.RenameMRI,
     user_id: int = Depends(validate_api_token),
     translation=Depends(get_localization_data)
 ):
@@ -71,7 +74,7 @@ async def upload_annotation(
     translation=Depends(get_localization_data)
 ):
     mri = await crud.get_mri_file_by_id(id)
-    new_file = await utils.annotation_upload(
+    new_file = await annotation_upload(
         files=files,
         creds=creds,
         patient_id=mri.patient.id,
@@ -80,7 +83,7 @@ async def upload_annotation(
         name=name,
         translation=translation
     )
-    return {"id": new_file[0]["id"]}
+    return {"id": new_file["id"]}
 
 
 @router.get(
@@ -94,9 +97,9 @@ async def annotations(
     translation=Depends(get_localization_data)
 ):
     service = build("drive", "v3", credentials=creds)
-    folder_id = utils.get_drive_folder_id(service, translation)
+    folder_id = upload.get_drive_folder_id(service, translation)
     # get gdrive folder content
-    files = utils.get_drive_folder_content(service, folder_id)
+    files = upload.get_drive_folder_content(service, folder_id)
 
     annotations_list = await crud.get_annotations_by_mri_and_user(id, user_id)
 
@@ -114,13 +117,20 @@ async def load_annotation(
     translation=Depends(get_localization_data)
 ):
     service = build("drive", "v3", credentials=creds)
-    f_e = utils.MRIFile(filename="", content="")
+    f_e = MRIFile(filename="", content="")
+
     annotation = await crud.get_annotation_by_id(annotation_id)
     if annotation is None:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
             content={"message": translation["annotation_not_found"]},
         )
+    if annotation.ready is False:
+        raise APIException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"message": translation["annotation_not_ready"]},
+        )
+
     f_e.download_decrypted(service, annotation.file_id)
 
     return base64.b64encode(f_e.content)
@@ -161,10 +171,10 @@ async def remove_annotation(
     response_model=s.AnnotationFiles,
     dependencies=[Depends(validate_api_token)]
 )
-async def rename_annotation(
+async def change_annotation(
     mri_id: int,
     annotation_id: int,
-    annotation: s.RenameAnnotationMRI,
+    annotation: s.AnnotationEdit,
     user_id: int = Depends(validate_api_token),
     translation=Depends(get_localization_data)
 ):
@@ -175,7 +185,9 @@ async def rename_annotation(
         translation
     )
     try:
-        await crud.update_annotation_name(annotation_id, annotation.name)
+        annotation = annotation.dict(exclude_none=True, exclude_unset=True)
+        await crud.update_annotation_details(annotation_id, annotation)
+
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

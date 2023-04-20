@@ -1,0 +1,11 @@
+Host github.backend
+        Hostname github.com
+        IdentityFile=/home/ubuntu/.ssh/backend
+
+Host github.frontend
+        Hostname github.com
+        IdentityFile=/home/ubuntu/.ssh/frontend
+
+Host github.teamsite
+        Hostname github.com
+        IdentityFile=/home/ubuntu/.ssh/teamsite 
