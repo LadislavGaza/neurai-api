@@ -29,25 +29,6 @@ class NewPatient(BaseModel):
     birth_date: date
 
 
-class MRIFile(BaseModel):
-    id: int
-    name: str
-    created_at: datetime
-    modified_at: datetime
-
-
-class Annotation(BaseModel):
-    id: int
-    name: str
-
-    class Config:
-        orm_mode = True
-
-
-class MRIFileAnnotations(MRIFile):
-    annotation_files: List[Annotation]
-
-
 class ScreeningInfo(BaseModel):
     id: int
     name: str

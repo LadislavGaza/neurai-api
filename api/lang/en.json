@@ -20,5 +20,6 @@
   "mri_name_exists": "MRI with this name already exists",
   "screening_not_found": "Screening not found",
   "annotation_not_found": "Annotation not found",
+  "annotation_not_ready": "Annotation not ready",
   "screening_name_exists": "Screening with this name already exists"
 }

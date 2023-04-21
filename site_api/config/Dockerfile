@@ -12,11 +12,4 @@ RUN pip install -r site_api/config/requirements.txt
 
 
 EXPOSE 8080
-# CMD [                                       \
-#     "gunicorn",                             \
-#     "-k", "uvicorn.workers.UvicornWorker",  \
-#     "-c", "site_api/config/gunicorn.conf.py",    \
-#     "site_api.main:app"                          \
-# ]
-
 ENTRYPOINT ["/bin/sh", "-c" , "alembic -c site_api/config/alembic.ini -x data=true upgrade head && gunicorn -k uvicorn.workers.UvicornWorker -c site_api/config/gunicorn.conf.py site_api.main:app"]

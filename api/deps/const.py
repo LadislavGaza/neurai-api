@@ -6,6 +6,8 @@ import logging
 
 APP_NAME = "NeurAI"
 ANNOT_MASK = "maska"
+ANNOT_MASK_AI = "AI maska"
+
 
 class JWT:
     SECRET = os.environ.get("JWT_SECRET")  # openssl rand -hex 32
@@ -32,6 +34,11 @@ class CORS:
         "http://localhost:4040/",
         "http://localhost:4040"
     ]
+
+
+class I18n:
+    LANGUAGES = ["sk", "en"]
+    DEFAULT_LANGUAGE = "sk"
 
 
 class ENC:
