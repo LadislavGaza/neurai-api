@@ -103,10 +103,15 @@ async def patient_screenings(
         patient_id=patient_id,
         user_id=user_id
     )
+    screenings_out = []
+    for (screening, in_progress) in screenings:
+        item = screening.__dict__
+        item['annotation_in_progress'] = in_progress
+        screenings_out.append(item)
 
     return {
         "patient": patient,
-        "screenings": screenings
+        "screenings": screenings_out
     }
 
 

@@ -1,6 +1,7 @@
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import subqueryload
+from sqlalchemy.orm import Query
 
 from typing import Iterable
 from datetime import date
@@ -8,6 +9,7 @@ from datetime import date
 import api.db.model as m
 import api.deps.schema as s
 from api.deps import const
+from sqlalchemy.orm import Mapper
 
 
 async def create_user(user: s.UserCredential):
@@ -295,8 +297,18 @@ async def create_screening(name: str, patient_id: str, user_id: int):
 
 async def get_screenings_by_patient_and_user(patient_id: str, user_id: int) -> Iterable[m.Screening]:
     async with AsyncSession(m.engine) as session:
+        subquery = (
+            select(m.Annotation.id)
+            .filter(
+                m.Annotation.mri_file_id == m.MRIFile.id,
+                m.MRIFile.screening_id == m.Screening.id,
+                m.Annotation.ready == False
+            )
+            .exists()
+        )
         query = (
             select(m.Screening)
+            .add_columns(subquery.label('annotation_in_progress'))
             .where(
                 m.Screening.patient_id == patient_id,
                 m.Screening.created_by == user_id
@@ -304,7 +316,7 @@ async def get_screenings_by_patient_and_user(patient_id: str, user_id: int) -> I
             .order_by(m.Screening.created_at.desc())
         )
         result = await session.execute(query)
-    return result.scalars().all()
+    return result.fetchall()
 
 
 async def get_screening_by_id_and_user(screening_id: int, user_id: int) -> m.Screening:

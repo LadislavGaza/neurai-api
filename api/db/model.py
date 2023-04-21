@@ -13,6 +13,7 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship
 )
+from sqlalchemy.ext.hybrid import hybrid_property
 
 
 DB_URL = os.environ.get("DB_URL")
@@ -187,6 +188,6 @@ class Annotation(Base):
         MRIFile, foreign_keys=[mri_file_id], back_populates='annotations'
     )
 
-    @property
+    @hybrid_property
     def ready(self):
         return self.job_name == None
