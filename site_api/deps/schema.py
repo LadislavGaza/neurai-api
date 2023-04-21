@@ -41,17 +41,17 @@ class PatientDetailScreenings(BaseModel):
     screenings: List[ScreeningInfo]
 
 
-class HospitalMRI(BaseModel):
-    uid: str
-    filename: str | None
-    description: str | None
+class HospitalMRI(BaseModel):  # series/snimkovanie/nifticko TBD
+    series_uid: str
+    filename: str | None   # ProtocolName from PACS
+    description: str | None  # mri_files.description
     created_at: datetime | None
 
 
-class HospitalScreening(BaseModel):
-    uid: str
-    description: str | None
-    performed_at: datetime | None
+class HospitalScreening(BaseModel):  # study/vysetrenie
+    study_uid: str
+    name: str | None  # screening name is study description from pacs
+    created_at: datetime | None
     mri_files: List[HospitalMRI]
 
 
@@ -60,6 +60,8 @@ class HospitalStoragePatient(BaseModel):
     name: str
     birth_date: date | None
 
+
+class HospitalStoragePatientStudy(BaseModel):
     screenings: List[HospitalScreening]
 
 

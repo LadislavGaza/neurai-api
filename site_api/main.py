@@ -220,15 +220,28 @@ async def patient_screenings(
 
 
 @app.get("/pacs/patients", response_model=List[s.HospitalStoragePatient])
-async def pacs_search(
-    search: s.HostitalStorageSearch = Depends(),
+async def pacs_search_patients(
+    search: s.HostitalStorageSearch = Depends()
+):
+    pacs = PACSClient(const.PACS.IP, const.PACS.PORT, const.PACS.AE_TITLE)
+    results = pacs.search_patients(vars(search))
+
+    return results
+
+
+@app.get("/pacs/studies", response_model=List[s.HospitalStoragePatient])
+async def pacs_search_studies(
+    search: s.HospitalStoragePatient = Depends(),
     authorization: str | None = Header(default=None)
 ):
     pacs = PACSClient(const.PACS.IP, const.PACS.PORT, const.PACS.AE_TITLE)
-    results = pacs.search(vars(search))
+    results = pacs.search_studies_by_patient(vars(search))
+    # response from api to return all study_ids and series_ids
+    # we have in db for current patient based on patient id
+    response = api_get("/patients", authorization)
+
     # TODO: check if patient, study, series are already imported in "api" database
     return results
-
 
 @app.post("/pacs/mri")
 async def pacs_export(

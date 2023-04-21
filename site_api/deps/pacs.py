@@ -38,13 +38,13 @@ class PACSClient:
         "PatientBirthDate": "birth_date"
     }
     STUDY_METADATA = {
-        "StudyInstanceUID": "uid",
-        "StudyDescription": "description",
+        "StudyInstanceUID": "study_uid",
+        "StudyDescription": "name",
         "StudyDate": "created_at_date",
         "StudyTime": "created_at_time"
     }
     SERIES_METADATA = {
-        "SeriesInstanceUID": "uid", 
+        "SeriesInstanceUID": "series_uid",
         "SeriesDescription": "description",
         "ProtocolName": "filename",
         "SeriesDate": "created_at_date",
@@ -56,7 +56,6 @@ class PACSClient:
     DATE_FIELDS = {"PatientBirthDate", "StudyDate", "SeriesDate"}
     TIME_FIELDS = {"StudyTime", "SeriesTime"}
 
-     
     def __init__(self, ip: str, port: int, ae_title: str):
         debug_logger()
         self.ip = ip
@@ -64,7 +63,7 @@ class PACSClient:
         self.ae_title = ae_title
         self.ae = AE()
 
-    def search(self, query: dict):
+    def search_studies_by_patient(self, query: dict):
         self.ae = AE()
         self.ae.add_requested_context(PatientRootQueryRetrieveInformationModelFind)
         ds = Dataset()
@@ -96,6 +95,50 @@ class PACSClient:
 
         return self._dicom_series_group_by_patient(results)
 
+    def search_patients(self, query: dict):
+        self.ae = AE()
+        self.ae.add_requested_context(PatientRootQueryRetrieveInformationModelFind)
+        ds = Dataset()
+        ds.QueryRetrieveLevel = "STUDY"
+
+        query['PatientName'] = f"*{query.get('PatientName', '')}*"
+        for field in self.PATIENT_METADATA.keys():
+            setattr(ds, field, query.get(field, ""))
+
+        results = []
+        assoc = self.ae.associate(self.ip, self.port, ae_title=self.ae_title)
+        if not assoc.is_established:
+            return results
+
+        responses = assoc.send_c_find(ds, PatientRootQueryRetrieveInformationModelFind)
+
+        for (status, identifier) in responses:
+            if identifier is None:
+                continue
+
+            item = {
+                field: self._attribute_parse(
+                    field, getattr(identifier, field)
+                )
+                for field in self.PATIENT_METADATA.keys()
+                if hasattr(identifier, field)
+            }
+            results.append(item)
+        assoc.release()
+        results_renamed = []
+        for patient in results:
+            patient_mapped = utils.rename_dict_keys(
+                patient,
+                self.PATIENT_METADATA
+            )
+            if patient_mapped['birth_date']:
+                patient_mapped['birth_date'] = datetime.strptime(patient_mapped['birth_date'], "%Y%m%d").strftime("%d.%m.%Y")
+            else:
+                patient_mapped['birth_date'] = None
+            results_renamed.append(patient_mapped)
+
+        return results_renamed
+
     def download(self, series_uid: str, folder: str) -> bool:
         self.ae = AE()
         ext_neg = self._export_role_selection()
@@ -122,6 +165,7 @@ class PACSClient:
         responses = assoc.send_c_get(ds, query_model)
         for (status, rsp_identifier) in responses:
             if status and status.Status in [0xFF00, 0xFF01]:
+                # to be added processing of response?
                 pass
 
         assoc.release()
