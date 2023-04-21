@@ -103,7 +103,7 @@ async def annotations(
 
     annotations_list = await crud.get_annotations_by_mri_and_user(id, user_id)
 
-    return utils.get_annotations_per_user(annotations_list, files)
+    return utils.get_existing_files_per_user(annotations_list, files)
 
 
 @router.get(

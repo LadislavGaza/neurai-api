@@ -32,7 +32,7 @@ async def get_mri_files_and_annotations_per_screening(user, files, screening_id)
             )
 
             # verify annotation presence in drive
-            annotations = get_annotations_per_user(annotations, files)
+            annotations = get_existing_files_per_user(annotations, files)
             mri_files.append({
                 "id": file.id,
                 "name": file.filename,
@@ -48,10 +48,10 @@ def generate_unique_patient_id():
     return ''.join(choices(string.ascii_uppercase + string.digits, k=10))
 
 
-def get_annotations_per_user(annotations, files):
+def get_existing_files_per_user(files, drive_files):
     annotation_files = []
-    drive_file_ids = [record["id"] for record in files]
-    for file in annotations:
+    drive_file_ids = [record["id"] for record in drive_files]
+    for file in files:
         if file.file_id in drive_file_ids:
             annotation_files.append(file)
 
@@ -89,3 +89,19 @@ def get_localization_data(request: Request):
         translation = open("api/lang/sk.json", "r")
 
     return json.load(translation)
+
+
+def get_screenings_and_mri_files_per_patient(
+        files,
+        screenings
+):
+    studies = []
+
+    for study in screenings:
+        series = get_existing_files_per_user(study.mri_files, files)
+        studies.append({
+            'study_uid': study.study_uid,
+            'mri_files': series
+        })
+
+    return studies

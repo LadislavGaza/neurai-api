@@ -111,6 +111,33 @@ async def patient_screenings(
 
 
 @router.get(
+    "/patient/{patient_id}/study",
+    # response_model=List[s.ExistingStudies]
+)
+async def patient_studies(
+    patient_id: str,
+    creds=Depends(validate_drive_token),
+    user_id: int = Depends(validate_api_token),
+    translation=Depends(get_localization_data)
+):
+    screenings = await crud.get_screenings_series_by_patient_and_user(
+        patient_id=patient_id,
+        user_id=user_id
+    )
+
+    service = build("drive", "v3", credentials=creds)
+    folder_id = upload.get_drive_folder_id(service, translation)
+    files = upload.get_drive_folder_content(service, folder_id)
+
+    studies_series = utils.get_screenings_and_mri_files_per_patient(
+        screenings=screenings,
+        files=files
+    )
+
+    return studies_series
+
+
+@router.get(
     "/screening/{screening_id}/files",
     response_model=s.ScreeningFiles
 )

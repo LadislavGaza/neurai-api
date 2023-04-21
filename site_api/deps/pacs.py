@@ -63,7 +63,7 @@ class PACSClient:
         self.ae_title = ae_title
         self.ae = AE()
 
-    def search_studies_by_patient(self, query: dict):
+    def search_studies_by_patient(self, query: dict, existing_studies: dict):
         self.ae = AE()
         self.ae.add_requested_context(PatientRootQueryRetrieveInformationModelFind)
         ds = Dataset()
@@ -93,7 +93,7 @@ class PACSClient:
             results.append(item)
         assoc.release()
 
-        return self._dicom_series_group_by_patient(results)
+        return self._dicom_series_group_by_patient(results, existing_studies)
 
     def search_patients(self, query: dict):
         self.ae = AE()
@@ -101,7 +101,7 @@ class PACSClient:
         ds = Dataset()
         ds.QueryRetrieveLevel = "STUDY"
 
-        query['PatientName'] = f"*{query.get('PatientName', '')}*"
+        query["PatientName"] = f"*{query.get('PatientName', '')}*"
         for field in self.PATIENT_METADATA.keys():
             setattr(ds, field, query.get(field, ""))
 
@@ -171,39 +171,41 @@ class PACSClient:
         assoc.release()
         return True
 
-    def _dicom_series_group_by_patient(self, series):
+    def _dicom_series_group_by_patient(self, series, existing_studies):
         # Reorganize hierarchically, IDs are assumed to be required fields
-        PATIENT_ID = "PatientID"
         STUDY_ID = "StudyInstanceUID"
 
-        patients = []
-        series = sorted(series, key=lambda x: x[PATIENT_ID])
+        patient = []
+        p_group = sorted(series, key=lambda x: x[STUDY_ID])
+        existing_studies_list = [s['study_uid'] for s in existing_studies]
 
-        for p_key, p_group in groupby(series):
-            patient = utils.filter_dict_keys(p_key, self.PATIENT_METADATA.keys())
-            patient = utils.rename_dict_keys(patient, self.PATIENT_METADATA)
+        for st_key, st_group in groupby(p_group):
+            study = utils.filter_dict_keys(st_key, self.STUDY_METADATA.keys())
+            study = utils.rename_dict_keys(study, self.STUDY_METADATA)
+            study = self._merge_created_timestamp(study)
 
-            patient["screenings"] = []
-            p_group = sorted(p_group, key=lambda x: x[STUDY_ID])
+            existing_series_uid_list = []
+            if study["study_uid"] in existing_studies_list:
+                existing_study = existing_studies[existing_studies_list.index(study["study_uid"])]["mri_files"]
+                if existing_study:
+                    existing_series_uid_list = [series["series_uid"] for series in existing_study]
 
-            for st_key, st_group in groupby(p_group):
-                study = utils.filter_dict_keys(st_key, self.STUDY_METADATA.keys())
-                study = utils.rename_dict_keys(study, self.STUDY_METADATA)
-                study = self._merge_created_timestamp(study)
+            study["mri_files"] = []
+            for series in st_group:
+                image = utils.filter_dict_keys(series, self.SERIES_METADATA.keys())
+                image = utils.rename_dict_keys(image, self.SERIES_METADATA)
+                image = self._merge_created_timestamp(image)
 
-                study["mri_files"] = []
-                for series in st_group:
-                    image = utils.filter_dict_keys(series, self.SERIES_METADATA.keys())
-                    image = utils.rename_dict_keys(image, self.SERIES_METADATA)
-                    image = self._merge_created_timestamp(image)
-                    study["mri_files"].append(image)
+                if image['series_uid'] in existing_series_uid_list:
+                    image['already_downloaded'] = True
+                else:
+                    image['already_downloaded'] = False
 
-                patient["screenings"].append(study)
+                study["mri_files"].append(image)
 
-            patients.append(patient)
+            patient.append(study)
 
-        return patients
-
+        return patient
 
     def _merge_created_timestamp(self, element):
         if isinstance(element.get("created_at_date"), date):

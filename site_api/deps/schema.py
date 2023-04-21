@@ -46,6 +46,7 @@ class HospitalMRI(BaseModel):  # series/snimkovanie/nifticko TBD
     filename: str | None   # ProtocolName from PACS
     description: str | None  # mri_files.description
     created_at: datetime | None
+    already_downloaded: bool | None
 
 
 class HospitalScreening(BaseModel):  # study/vysetrenie
@@ -61,11 +62,7 @@ class HospitalStoragePatient(BaseModel):
     birth_date: date | None
 
 
-class HospitalStoragePatientStudy(BaseModel):
-    screenings: List[HospitalScreening]
-
-
-class HostitalStorageSearch:
+class HospitalStorageSearch:
     def __init__(
         self,
         id: str | None = None,

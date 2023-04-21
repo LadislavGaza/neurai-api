@@ -127,3 +127,14 @@ class ScreeningInfo(BaseModel):
 class PatientDetailScreenings(BaseModel):
     patient: Patient
     screenings: List[ScreeningInfo]
+
+
+class ExistingSeries(BaseModel):
+    id: int
+    file_id: str
+    series_uid: str | None
+
+
+class ExistingStudies(BaseModel):
+    study_uid: str | None
+    mri_files: List[ExistingSeries]
