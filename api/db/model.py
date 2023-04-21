@@ -83,7 +83,7 @@ class Screening(Base):
     patient_id: Mapped[str] = mapped_column(
         String(20), ForeignKey("patients.id")
     )
-
+    study_uid: Mapped[str] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete='CASCADE')
@@ -113,6 +113,8 @@ class MRIFile(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     filename: Mapped[str]
     file_id: Mapped[str]
+    description: Mapped[str] = mapped_column(nullable=True)
+    series_uid: Mapped[str] = mapped_column(nullable=True)
     patient_id: Mapped[str] = mapped_column(
         String(20), ForeignKey("patients.id")
     )
