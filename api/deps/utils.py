@@ -62,7 +62,7 @@ async def verify_file_creator(file_id, user_id, file_type, translation):
     if file_type == "annotation":
         file = await crud.get_annotation_by_id(file_id)
     elif file_type == "mri":
-        file = await crud.get_mri_by_id(file_id)
+        file = await crud.get_mri_file_by_id(file_id)
     if not file:
         raise APIException(
             status_code=status.HTTP_400_BAD_REQUEST,
