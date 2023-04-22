@@ -299,7 +299,9 @@ async def get_screenings_by_patient_and_user(patient_id: str, user_id: int) -> I
             .filter(
                 m.Annotation.mri_file_id == m.MRIFile.id,
                 m.MRIFile.screening_id == m.Screening.id,
-                m.Annotation.ready == False
+                m.Annotation.ready == False,
+                m.Annotation.is_ai == True,
+                m.Annotation.visible == True
             )
             .exists()
         )
