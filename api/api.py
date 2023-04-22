@@ -1,3 +1,4 @@
+import asyncio
 from logging.config import dictConfig
 
 from fastapi import (
@@ -36,6 +37,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.waiting_for_inference_queue = asyncio.Queue()
+app.finished_inference_message_queue = asyncio.Queue()
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 

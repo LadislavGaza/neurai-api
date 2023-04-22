@@ -113,11 +113,11 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, screenin
 
 
 async def create_annotation_file(
-    name: str,
-    patient_id: str,
-    user_id: int,
-    mri_id: int,
-    is_ai: bool
+        name: str,
+        patient_id: str,
+        user_id: int,
+        mri_id: int,
+        is_ai: bool
 ) -> int:
     async with AsyncSession(m.engine) as session:
         if name:
@@ -154,8 +154,8 @@ async def create_annotation_file(
 
 
 async def create_patient(
-    patient: s.Patient,
-    user_id: int
+        patient: s.Patient,
+        user_id: int
 ):
     patient_model = m.Patient(
         id=patient.id,
@@ -192,6 +192,23 @@ async def get_annotations_by_mri_and_user(mri_id: int, user_id: int) -> Iterable
     return result.scalars().all()
 
 
+async def get_ai_annotation_by_mri_id_and_user(mri_id: int, user_id: int) -> m.Annotation:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Annotation)
+            .where(
+                m.Annotation.mri_file_id == mri_id,
+                m.Annotation.created_by == user_id,
+                m.Annotation.is_ai == True
+            )
+            .order_by(m.Annotation.created_at.desc())
+            .options(subqueryload(m.Annotation.mri_file))
+        )
+        result = await session.execute(query)
+
+    return result.scalars().first()
+
+
 async def get_annotation_by_id(id: int) -> m.Annotation:
     async with AsyncSession(m.engine) as session:
         query = (
@@ -213,11 +230,11 @@ async def delete_annotation(id: int):
 
 
 async def update_annotation_file(
-    id: int,
-    filename: str,
-    file_id: str,
-    visible: bool,
-    job_name: str = None,
+        id: int,
+        filename: str,
+        file_id: str,
+        visible: bool,
+        job_name: str = None,
 ):
     async with AsyncSession(m.engine) as session:
         stmt = (
@@ -261,7 +278,7 @@ async def get_running_inferences():
         query = (
             select(m.Annotation)
             .where(m.Annotation.job_name != None)
-            .options(subqueryload(m.Annotation.creator))
+            .options(subqueryload(m.Annotation.creator).subqueryload(m.Annotation.mri_file))
         )
         result = await session.execute(query)
 
