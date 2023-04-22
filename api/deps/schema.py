@@ -119,9 +119,7 @@ class ScreeningInfo(BaseModel):
     name: str
     created_at: datetime
     modified_at: datetime
-
-    class Config:
-        orm_mode = True
+    annotation_in_progress: bool
 
 
 class PatientDetailScreenings(BaseModel):
