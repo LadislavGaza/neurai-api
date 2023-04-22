@@ -105,8 +105,8 @@ async def patient_screenings(
     )
     screenings_out = []
     for (screening, in_progress) in screenings:
-        item = screening.__dict__
-        item['annotation_in_progress'] = in_progress
+        item = vars(screening)
+        item["annotation_in_progress"] = in_progress
         screenings_out.append(item)
 
     return {

@@ -1,15 +1,12 @@
 from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import subqueryload
-from sqlalchemy.orm import Query
-
 from typing import Iterable
 from datetime import date
 
 import api.db.model as m
 import api.deps.schema as s
 from api.deps import const
-from sqlalchemy.orm import Mapper
 
 
 async def create_user(user: s.UserCredential):
