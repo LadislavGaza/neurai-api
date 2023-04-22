@@ -307,7 +307,7 @@ async def get_screenings_by_patient_and_user(patient_id: str, user_id: int) -> I
         )
         query = (
             select(m.Screening)
-            .add_columns(subquery.label('annotation_in_progress'))
+            .add_columns(subquery.label("annotation_in_progress"))
             .where(
                 m.Screening.patient_id == patient_id,
                 m.Screening.created_by == user_id
