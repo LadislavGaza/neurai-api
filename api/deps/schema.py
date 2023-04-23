@@ -61,7 +61,6 @@ class Annotation(BaseModel):
     name: str
     is_ai: bool
     ready: bool
-    visible: bool
 
     class Config:
         orm_mode = True
