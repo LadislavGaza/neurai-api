@@ -200,46 +200,21 @@ async def change_annotation(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-# overall logic: 2 queues
-# 1. queue for annotation jobs that are in progress and requested from FE
-# waiting_for_inference_queue
-# 2. queue for annotation jobs that are ready and requested from FE to return to user
-# finished_inference_message_queue
-
 @router.post('/annotations/ai')
 async def ai_annotation_visible(
-    user_id: int = Depends(validate_api_token),
-    translation=Depends(get_localization_data)
+    user_id: int = Depends(validate_api_token)
 ):
     from api.api import app as app_fastapi
+    app_fastapi.clients[user_id] = asyncio.Queue()
 
     # this is method that will be called by streaming response or some other sse handler
     async def check_for_processed_ai():
 
-        unprocessed_user_id_messages = []
         while True:
-            print('checking')
-            if app_fastapi.finished_inference_message_queue.empty():
-                print('wait 60')
+            if app_fastapi.clients[user_id].empty():
                 await asyncio.sleep(60)
                 continue
-            mri_id_message = await app_fastapi.finished_inference_message_queue.get()
-            print('message', mri_id_message)
-            if mri_id_message['user_id'] == user_id:
-                app_fastapi.finished_inference_message_queue.task_done()
-                # return to FE only if flag is visible
-                yield json.dumps(mri_id_message)
-            else:
-                unprocessed_user_id_messages.append(mri_id_message)
-                app_fastapi.finished_inference_message_queue.task_done()
+            user_id_message = await app_fastapi.clients[user_id].get()
+            yield json.dumps(user_id_message)
 
-        await app_fastapi.finished_inference_message_queue.join()
-
-        # return all not matching this request to the queue
-        for message in unprocessed_user_id_messages:
-            await app_fastapi.finished_inference_message_queue.put(message)
-
-    # in endpoint to request visible annotations
-    await app_fastapi.waiting_for_inference_queue.put(user_id)
-    print('in a queue')
     return EventSourceResponse(check_for_processed_ai())
