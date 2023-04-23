@@ -1,4 +1,3 @@
-import asyncio
 from logging.config import dictConfig
 
 from fastapi import (
