@@ -195,6 +195,20 @@ async def get_annotations_by_mri_and_user(mri_id: int, user_id: int) -> Iterable
     return result.scalars().all()
 
 
+async def get_ai_annotation_by_mri_id(mri_id: int) -> m.Annotation:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Annotation)
+            .where(
+                m.Annotation.mri_file_id == mri_id,
+                m.Annotation.is_ai == True
+            )
+        )
+        result = await session.execute(query)
+
+    return result.scalars().first()
+
+
 async def get_annotation_by_id(id: int) -> m.Annotation:
     async with AsyncSession(m.engine) as session:
         query = (
