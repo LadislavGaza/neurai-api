@@ -46,6 +46,14 @@ class ENC:
     SIG = base64.b64decode(bytes(os.environ.get("ENC_SIG"), "utf-8"))
 
 
+class AZUREML:
+    SUBSCRIPTION_ID = os.environ.get("AZURE_ML_SUBSCRIPTION_ID")
+    RESOURCE_GROUP = os.environ.get("AZURE_ML_RESOURCE_GROUP")
+    WORKSPACE = os.environ.get("AZURE_ML_WORKSPACE")
+    ENDPOINT = os.environ.get("AZURE_ML_ENDPOINT")
+    ENABLED = bool(os.environ.get("AZURE_ML_ENABLED") == '1')
+
+
 class LOGGING:
     MAX_SIZE_BYTES = 20000000
     ROTATIONS = 5

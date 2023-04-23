@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 import api.deps.schema as s
 from api.db import crud
-from api.deps import utils, upload
+from api.deps import utils, upload, const
 from api.deps.auth import validate_api_token, validate_drive_token
 from api.deps.utils import APIException, get_localization_data
 
@@ -196,8 +196,10 @@ async def upload_mri(
     mri = await upload.mri_upload(
         files, creds, screening.patient_id, screening_id, user_id, translation
     )
-    await upload.mri_auto_annotate(
-        mri, screening.patient_id, user_id, translation
-    )
+
+    if const.AZUREML.ENABLED == True:
+        await upload.mri_auto_annotate(
+            mri, screening.patient_id, user_id, translation
+        )
 
     return {"mri_files": [mri]}
