@@ -155,7 +155,7 @@ async def remove_annotation(
     )
 
     try:
-        if annotation.is_ai == True:
+        if annotation.is_ai is True:
             # soft delete
             update_values = { "visible": False }
             await crud.update_annotation_details(annotation_id, update_values)

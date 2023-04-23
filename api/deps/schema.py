@@ -82,6 +82,7 @@ class AnnotationEdit(BaseModel):
     name: str | None
     visible: bool | None
 
+
 class PatientFiles(BaseModel):
     mri_files: List[MRIFile]
 

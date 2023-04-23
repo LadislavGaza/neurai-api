@@ -51,9 +51,7 @@ class AZUREML:
     RESOURCE_GROUP = os.environ.get("AZURE_ML_RESOURCE_GROUP")
     WORKSPACE = os.environ.get("AZURE_ML_WORKSPACE")
     ENDPOINT = os.environ.get("AZURE_ML_ENDPOINT")
-    ENABLED = bool(
-        os.getenv("AZURE_ML_ENABLED", 'False').lower() in ('true', '1', 't')
-        )
+    ENABLED = bool(os.environ.get("AZURE_ML_ENABLED") == '1')
 
 
 class LOGGING:
