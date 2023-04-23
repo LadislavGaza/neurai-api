@@ -166,6 +166,8 @@ async def create_screening(
             patient_id=patient_id,
             user_id=user_id
         )
+        new_screening = vars(new_screening)
+        new_screening["annotation_in_progress"] = False
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

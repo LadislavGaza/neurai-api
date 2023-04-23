@@ -37,7 +37,8 @@ class User(Base):
     mri_files = relationship(
         'MRIFile',
         foreign_keys='[MRIFile.created_by]',
-        back_populates='creator'
+        back_populates='creator',
+        order_by='MRIFile.created_at.desc()'
     )
     annotations = relationship(
         'Annotation',
