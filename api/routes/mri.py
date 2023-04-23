@@ -155,8 +155,13 @@ async def remove_annotation(
     )
 
     try:
-        await crud.delete_annotation(annotation_id)
-        service.files().delete(fileId=annotation.file_id).execute()
+        if annotation.is_ai == True:
+            # soft delete
+            update_values = { "visible": False }
+            await crud.update_annotation_details(annotation_id, update_values)
+        else:
+            await crud.delete_annotation(annotation_id)
+            service.files().delete(fileId=annotation.file_id).execute()
     except Exception:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
