@@ -85,7 +85,7 @@ def create_nifti(files: List[UploadFile], translation) -> MRIFile:
     # Check for one NIfti
     if len(files) == 1:
         f = files[0]
-        mri = MRIFile(filename=f.filename, content=f.file)
+        mri = MRIFile(filename=str(uuid.uuid4()), content=f.file)
         result = mri.from_nifti()
         if result is False:
             raise APIException(
