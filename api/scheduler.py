@@ -35,5 +35,5 @@ async def check_done_inference():
                 "screening_id": annotation.mri_file.screening_id,
             }
 
-            if app_fastapi.clients[annotation.created_by]:
+            if annotation.created_by in app_fastapi.clients:
                 await app_fastapi.clients[annotation.created_by].put(data)
