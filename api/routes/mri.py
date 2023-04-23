@@ -238,7 +238,7 @@ async def request_ai_annotation_visibility(
     return annotation
 
 
-@router.get('/annotations/inference')
+@router.get("/annotations/inference")
 async def ai_annotation_visible(
     request: Request,
     user_id: int = Depends(validate_api_token),

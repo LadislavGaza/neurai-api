@@ -9,7 +9,7 @@ from api.api import app as app_fastapi
 app = Rocketry(config={"task_execution": "async"})
 
 
-@app.task(every('1 minutes', based="finish"))
+@app.task(every("1 minutes", based="finish"))
 async def check_done_inference():
     ml = MLInference()
     active_inferences = await crud.get_running_inferences()
@@ -29,10 +29,10 @@ async def check_done_inference():
             )
 
             data = {
-                'annotation_id': annotation.id,
-                'user_id': annotation.created_by,
-                'mri_id': annotation.mri_file_id,
-                'screening_id': annotation.mri_file.screening_id,
+                "annotation_id": annotation.id,
+                "user_id": annotation.created_by,
+                "mri_id": annotation.mri_file_id,
+                "screening_id": annotation.mri_file.screening_id,
             }
 
             if app_fastapi.clients[annotation.created_by]:

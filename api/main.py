@@ -4,7 +4,6 @@ Based on: https://github.com/Miksus/rocketry-with-fastapi
 import asyncio
 import logging
 import uvicorn
-import multiprocessing
 
 from api.api import app as app_fastapi
 from api.scheduler import app as app_rocketry
