@@ -38,8 +38,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.waiting_for_inference_queue = asyncio.Queue()
-app.finished_inference_message_queue = asyncio.Queue()
+app.waiting_for_inference_queue = asyncio.Queue()  # user_id
+app.finished_inference_message_queue = asyncio.Queue()  # dictionary with annotation data
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
