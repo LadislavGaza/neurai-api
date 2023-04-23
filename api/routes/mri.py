@@ -1,4 +1,6 @@
+import asyncio
 import base64
+import json
 
 from fastapi import (
     APIRouter,
@@ -23,7 +25,6 @@ from api.deps.mri_file import MRIFile
 from api.deps.upload import annotation_upload
 from api.deps.utils import APIException, get_localization_data
 from api.deps.auth import validate_api_token, validate_drive_token
-from api.api import app as app_fastapi
 
 
 router = APIRouter(
@@ -206,48 +207,50 @@ async def change_annotation(
 
 @router.post('/{mri_id}/annotations/ai')
 async def ai_annotation_visible(
-    visible: bool,
     mri_id: int,
     user_id: int = Depends(validate_api_token),
     translation=Depends(get_localization_data)
 ):
-    if visible:
+    annotation = await crud.get_ai_annotation_by_mri_id_and_user(mri_id, user_id)
+    # something failed in processing the annotation from Azure
+    if annotation is None:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": translation["annotation_not_found"]},
+        )
+    from api.api import app as app_fastapi
+    await app_fastapi.waiting_for_inference_queue.put(mri_id)
+    print('in a queue')
 
-        annotation = await crud.get_ai_annotation_by_mri_id_and_user(mri_id, user_id)
-        # something failed in processing the annotation from Azure
-        if annotation is None:
-            raise APIException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={"message": translation["annotation_not_found"]},
-            )
+    # this is method that will be called by streaming response or some other sse handler
+    async def generate():
 
-        # this is method that will be called by streaming response or some other sse handler
-        async def generate():
-            unprocessed_mri_id_messages = []
-            while True:
-                mri_id_message = app_fastapi.finished_inference_message_queue.get_nowait()
+        unprocessed_mri_id_messages = []
+        while True:
+            print('checking')
+            if app_fastapi.finished_inference_message_queue.empty():
+                await asyncio.sleep(1)
+                continue
+            mri_id_message = app_fastapi.finished_inference_message_queue.get_nowait()
+            print('message', mri_id_message)
+            if mri_id_message['user_id'] == user_id and mri_id_message['mri_id'] == mri_id:
+                app_fastapi.finished_inference_message_queue.task_done()
+                yield json.dumps(mri_id_message)
+            else:
+                unprocessed_mri_id_messages.append(mri_id_message)
+        await app_fastapi.finished_inference_message_queue.join()
 
-                if mri_id_message['user_id'] == user_id and mri_id_message['mri_id'] == mri_id:
-                    yield mri_id_message
-                    app_fastapi.finished_inference_message_queue.task_done()
-                    break
-                else:
-                    unprocessed_mri_id_messages.append(mri_id_message)
-            await app_fastapi.finished_inference_message_queue.join()
+        # return all not matching this request to the queue
+        for message in unprocessed_mri_id_messages:
+            app_fastapi.finished_inference_message_queue.put_nowait(message)
 
-            # return all not matching this request to the queue
-            for message in unprocessed_mri_id_messages:
-                app_fastapi.finished_inference_message_queue.put_nowait(message)
-
-        # annotation is not ready yet, inference on Azure is still in progress
-        if annotation.ready is False:
-            # Return a streaming response for SSE
-
-            return StreamingResponse(generate(), media_type="text/event-stream")
-        else:
-            return {
-                'annotation-id': annotation.id,
-                'user_id': user_id,
-                'mri_id': mri_id,
-                'screening_id': annotation.mri_file.screening_id,
-            }
+    # annotation is not ready yet, inference on Azure is still in progress
+    if annotation.ready is False:
+        return StreamingResponse(generate(), media_type="text/event-stream")
+    else:
+        return {
+            'annotation-id': annotation.id,
+            'user_id': user_id,
+            'mri_id': mri_id,
+            'screening_id': annotation.mri_file.screening_id,
+        }

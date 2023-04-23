@@ -278,7 +278,8 @@ async def get_running_inferences():
         query = (
             select(m.Annotation)
             .where(m.Annotation.job_name != None)
-            .options(subqueryload(m.Annotation.creator).subqueryload(m.Annotation.mri_file))
+            .options(subqueryload(m.Annotation.creator))
+            .options(subqueryload(m.Annotation.mri_file))
         )
         result = await session.execute(query)
 
