@@ -1,4 +1,6 @@
+import asyncio
 import base64
+import json
 
 from fastapi import (
     APIRouter,
@@ -8,11 +10,13 @@ from fastapi import (
     Form,
     File,
     UploadFile,
+    Request
 )
 from sqlalchemy.exc import IntegrityError
 
 from typing import List
 from googleapiclient.discovery import build
+from sse_starlette.sse import EventSourceResponse
 
 import api.deps.schema as s
 from api.db import crud
@@ -232,3 +236,18 @@ async def request_ai_annotation_visibility(
             content={"message": translation["annotation_not_found"]},
         )
     return annotation
+
+
+@router.get("/annotations/inference")
+async def ai_annotation_visible(
+    request: Request,
+    user_id: int = Depends(validate_api_token),
+):
+    request.app.clients[user_id] = asyncio.Queue()
+
+    async def check_for_processed_ai():
+        while True:
+            message = await request.app.clients[user_id].get()
+            yield json.dumps(message)
+
+    return EventSourceResponse(check_for_processed_ai())

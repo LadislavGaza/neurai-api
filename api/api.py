@@ -36,6 +36,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.clients = {}
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 

@@ -112,11 +112,11 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, screenin
 
 
 async def create_annotation_file(
-    name: str,
-    patient_id: str,
-    user_id: int,
-    mri_id: int,
-    is_ai: bool
+        name: str,
+        patient_id: str,
+        user_id: int,
+        mri_id: int,
+        is_ai: bool
 ) -> int:
     async with AsyncSession(m.engine) as session:
         if name:
@@ -153,8 +153,8 @@ async def create_annotation_file(
 
 
 async def create_patient(
-    patient: s.Patient,
-    user_id: int
+        patient: s.Patient,
+        user_id: int
 ):
     patient_model = m.Patient(
         id=patient.id,
@@ -230,11 +230,11 @@ async def delete_annotation(id: int):
 
 
 async def update_annotation_file(
-    id: int,
-    filename: str,
-    file_id: str,
-    visible: bool,
-    job_name: str = None,
+        id: int,
+        filename: str,
+        file_id: str,
+        visible: bool,
+        job_name: str = None,
 ):
     async with AsyncSession(m.engine) as session:
         stmt = (
@@ -244,6 +244,27 @@ async def update_annotation_file(
                 "filename": filename,
                 "file_id": file_id,
                 "visible": visible,
+                "job_name": job_name
+            })
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
+
+async def update_annotation_uploaded_file(
+        id: int,
+        filename: str,
+        file_id: str,
+        job_name: str = None,
+):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.Annotation)
+            .where(m.Annotation.id == id)
+            .values({
+                "filename": filename,
+                "file_id": file_id,
                 "job_name": job_name
             })
         )
@@ -279,6 +300,7 @@ async def get_running_inferences():
             select(m.Annotation)
             .where(m.Annotation.job_name != None)
             .options(subqueryload(m.Annotation.creator))
+            .options(subqueryload(m.Annotation.mri_file))
         )
         result = await session.execute(query)
 
