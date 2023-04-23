@@ -209,22 +209,6 @@ async def get_ai_annotation_by_mri_id(mri_id: int) -> m.Annotation:
     return result.scalars().first()
 
 
-async def get_ai_annotation_by_user(user_id: int) -> Iterable[m.Annotation]:
-    async with AsyncSession(m.engine) as session:
-        query = (
-            select(m.Annotation)
-            .where(
-                m.Annotation.created_by == user_id,
-                m.Annotation.is_ai == True
-            )
-            .order_by(m.Annotation.created_at.desc())
-            .options(subqueryload(m.Annotation.mri_file))
-        )
-        result = await session.execute(query)
-
-    return result.scalars().all()
-
-
 async def get_annotation_by_id(id: int) -> m.Annotation:
     async with AsyncSession(m.engine) as session:
         query = (
@@ -260,6 +244,27 @@ async def update_annotation_file(
                 "filename": filename,
                 "file_id": file_id,
                 "visible": visible,
+                "job_name": job_name
+            })
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
+
+async def update_annotation_uploaded_file(
+        id: int,
+        filename: str,
+        file_id: str,
+        job_name: str = None,
+):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.Annotation)
+            .where(m.Annotation.id == id)
+            .values({
+                "filename": filename,
+                "file_id": file_id,
                 "job_name": job_name
             })
         )

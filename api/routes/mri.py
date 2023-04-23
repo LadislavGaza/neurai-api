@@ -10,6 +10,7 @@ from fastapi import (
     Form,
     File,
     UploadFile,
+    Request
 )
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import IntegrityError
@@ -238,21 +239,16 @@ async def request_ai_annotation_visibility(
     return annotation
 
 
-@router.post('/annotations/ai')
+@router.get('/annotations/inference')
 async def ai_annotation_visible(
-    user_id: int = Depends(validate_api_token)
+    request: Request,
+    user_id: int = Depends(validate_api_token),
 ):
-    from api.api import app as app_fastapi
-    app_fastapi.clients[user_id] = asyncio.Queue()
+    request.app.clients[user_id] = asyncio.Queue()
 
-    # this is method that will be called by streaming response or some other sse handler
     async def check_for_processed_ai():
-
         while True:
-            if app_fastapi.clients[user_id].empty():
-                await asyncio.sleep(60)
-                continue
-            user_id_message = await app_fastapi.clients[user_id].get()
-            yield json.dumps(user_id_message)
+            message = await request.app.clients[user_id].get()
+            yield json.dumps(message)
 
     return EventSourceResponse(check_for_processed_ai())

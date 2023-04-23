@@ -21,11 +21,10 @@ async def check_done_inference():
             refresh_token = annotation.creator.refresh_token
             uploaded_file = upload.drive_upload(mri, refresh_token)
 
-            await crud.update_annotation_file(
+            await crud.update_annotation_uploaded_file(
                 id=annotation.id,
                 filename=uploaded_file["name"],
                 file_id=uploaded_file["id"],
-                visible=False,  # remove should not be changed by finished job
                 job_name=None       # Mark job as finished
             )
 
