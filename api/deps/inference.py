@@ -24,11 +24,11 @@ class MLInference:
     def __init__(self):
         self.ml =  MLClient(
             DefaultAzureCredential(),
-            os.environ.get("AZURE_ML_SUBSCRIPTION_ID"),
-            os.environ.get("AZURE_ML_RESOURCE_GROUP"),
-            os.environ.get("AZURE_ML_WORKSPACE")
+            const.AZUREML.SUBSCRIPTION_ID,
+            const.AZUREML.RESOURCE_GROUP,
+            const.AZUREML.WORKSPACE
         )
-        self.endpoint = os.environ.get("AZURE_ML_ENDPOINT")
+        self.endpoint = const.AZUREML.ENDPOINT
 
     def launch(self, mri: BytesIO) -> str:
         with tempfile.NamedTemporaryFile(suffix=self.FILE_FORMAT) as nifti:

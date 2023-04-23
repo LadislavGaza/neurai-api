@@ -1,7 +1,6 @@
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import subqueryload
-
 from typing import Iterable
 from datetime import date
 
@@ -184,12 +183,30 @@ async def get_annotations_by_mri_and_user(mri_id: int, user_id: int) -> Iterable
     async with AsyncSession(m.engine) as session:
         query = (
             select(m.Annotation)
-            .where(m.Annotation.mri_file_id == mri_id, m.Annotation.created_by == user_id)
+            .where(
+                m.Annotation.mri_file_id == mri_id,
+                m.Annotation.created_by == user_id,
+                m.Annotation.visible == True
+            )
             .order_by(m.Annotation.created_at.desc())
         )
         result = await session.execute(query)
 
     return result.scalars().all()
+
+
+async def get_ai_annotation_by_mri_id(mri_id: int) -> m.Annotation:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Annotation)
+            .where(
+                m.Annotation.mri_file_id == mri_id,
+                m.Annotation.is_ai == True
+            )
+        )
+        result = await session.execute(query)
+
+    return result.scalars().first()
 
 
 async def get_ai_annotation_by_user(user_id: int) -> Iterable[m.Annotation]:
@@ -312,8 +329,20 @@ async def create_screening(name: str, patient_id: str, user_id: int):
 
 async def get_screenings_by_patient_and_user(patient_id: str, user_id: int) -> Iterable[m.Screening]:
     async with AsyncSession(m.engine) as session:
+        subquery = (
+            select(m.Annotation.id)
+            .filter(
+                m.Annotation.mri_file_id == m.MRIFile.id,
+                m.MRIFile.screening_id == m.Screening.id,
+                m.Annotation.ready == False,
+                m.Annotation.is_ai == True,
+                m.Annotation.visible == True
+            )
+            .exists()
+        )
         query = (
             select(m.Screening)
+            .add_columns(subquery.label("annotation_in_progress"))
             .where(
                 m.Screening.patient_id == patient_id,
                 m.Screening.created_by == user_id
@@ -321,7 +350,7 @@ async def get_screenings_by_patient_and_user(patient_id: str, user_id: int) -> I
             .order_by(m.Screening.created_at.desc())
         )
         result = await session.execute(query)
-    return result.scalars().all()
+    return result.fetchall()
 
 
 async def get_screening_by_id_and_user(screening_id: int, user_id: int) -> m.Screening:
