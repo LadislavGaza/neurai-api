@@ -6,7 +6,7 @@ from pathlib import Path
 
 from azure.identity import DefaultAzureCredential
 from azure.ai.ml import MLClient, Input
-from azure.ai.ml.entities import Model, Data
+from azure.ai.ml.entities import Data
 from azure.ai.ml.constants import AssetTypes
 from azure.core.exceptions import ClientAuthenticationError
 
@@ -22,8 +22,12 @@ class MLInference:
     FILE_FORMAT = ".nii.gz"
 
     def __init__(self):
-        self.ml =  MLClient(
-            DefaultAzureCredential(),
+        self.ml = MLClient(
+            DefaultAzureCredential(
+                exclude_environment_credential=True,
+                exclude_managed_identity_credential=True,
+                exclude_shared_token_cache_credential=True
+            ),
             const.AZUREML.SUBSCRIPTION_ID,
             const.AZUREML.RESOURCE_GROUP,
             const.AZUREML.WORKSPACE
