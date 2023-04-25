@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, File, UploadFile, status
@@ -156,9 +155,6 @@ async def create_screening(
     user_id: int = Depends(validate_api_token),
     translation=Depends(get_localization_data)
 ):
-    # default name for screening is actual date
-    if not screening.name:
-        screening.name = datetime.now().strftime('%d-%m-%Y')
 
     try:
         new_screening = await crud.create_screening(
