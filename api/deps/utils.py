@@ -52,7 +52,7 @@ def get_annotations_per_user(annotations, files):
     annotation_files = []
     drive_file_ids = [record["id"] for record in files]
     for file in annotations:
-        if (file.file_id in drive_file_ids) or (file.is_ai is True):
+        if (file.file_id in drive_file_ids) or (file.is_ai):
             annotation_files.append(file)
 
     return annotation_files
