@@ -1,8 +1,8 @@
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import subqueryload
-from typing import Iterable
-from datetime import date
+from typing import Iterable 
+from datetime import datetime
 
 import api.db.model as m
 import api.deps.schema as s
@@ -326,6 +326,24 @@ async def create_screening(name: str, patient_id: str, user_id: int):
         modified_by=user_id,
     )
     async with AsyncSession(m.engine) as session:
+        if not screening_model.name:
+            query = (
+                select(m.Screening)
+                .where(m.Screening.patient_id == patient_id)
+                .where(m.Screening.name.regexp_match(
+                '^(0[1-9]|[1-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-[0-9]{4} [0-9]+$'
+                ))
+                .order_by(m.Screening.created_at.desc()))
+            result = await session.execute(query)
+            screening = result.scalars().first()
+            # default name for screening is actual date + number
+            stamp = datetime.now().strftime('%d-%m-%Y')
+            if screening and screening.name[len(stamp + ' '):]:
+                highest_number = int(screening.name[len(stamp + ' '):])
+                screening_model.name = f'{stamp} {str(highest_number + 1)}'
+            else:
+                screening_model.name = f'{stamp} 1'
+
         session.add(screening_model)
         await session.commit()
         await session.refresh(screening_model)
