@@ -17,3 +17,15 @@ def get_localization_data(request: Request):
         translation = open("api/lang/sk.json", "r")
 
     return json.load(translation)
+
+
+def filter_dict_keys(dictionary: dict, allowed_keys: set):
+    return {
+        k: v for k, v in dictionary.items() 
+        if v and k in allowed_keys
+    }
+
+def rename_dict_keys(dictionary: dict, mapper: dict):
+    return {
+        mapper[k]: v for k, v in dictionary.items() 
+    }

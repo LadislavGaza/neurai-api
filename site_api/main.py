@@ -1,5 +1,7 @@
 import json
 import logging
+import tempfile
+from pathlib import Path
 from logging.config import dictConfig
 from typing import List
 
@@ -25,6 +27,8 @@ from site_api.deps import const
 from site_api.db import crud
 import site_api.deps.schema as s
 from site_api.deps.utils import get_localization_data
+from site_api.deps.pacs import PACSClient
+
 
 log = const.LOGGING()
 dictConfig(log.CONFIG)
@@ -213,3 +217,46 @@ async def patient_screenings(
         s.PatientDetail.from_orm(patient).dict()
     )
     return response_files
+
+
+@app.get("/pacs/patients", response_model=List[s.HospitalStoragePatient])
+async def pacs_search_patients(
+    search: s.HospitalStorageSearch = Depends()
+):
+    pacs = PACSClient(const.PACS.IP, const.PACS.PORT, const.PACS.AE_TITLE)
+    results = pacs.search_patients(vars(search))
+
+    return results
+
+
+@app.get("/pacs/studies", response_model=List[s.HospitalScreening])
+async def pacs_search_studies(
+    patient_id: str,
+    authorization: str | None = Header(default=None)
+):
+    response = api_get(f"/patient/{patient_id}/study", authorization)
+    existing_studies = response.json()
+
+    pacs = PACSClient(const.PACS.IP, const.PACS.PORT, const.PACS.AE_TITLE)
+    search = {'PatientID': patient_id}
+    results = pacs.search_studies_by_patient(search, existing_studies)
+
+    return results
+
+@app.post("/pacs/mri")
+async def pacs_export(
+    mri_file_uids: List[str],
+    authorization: str | None = Header(default=None)
+):
+    pacs = PACSClient(const.PACS.IP, const.PACS.PORT, const.PACS.AE_TITLE)
+
+    for uid in mri_file_uids:
+        temp_directory = tempfile.TemporaryDirectory()
+        temp_dir_path = Path(temp_directory.name)  
+        pacs.download(uid, temp_dir_path)
+        # TODO: Upload MRI via API (add optional UID fields)
+        # TODO: Create associated patient and study in API
+        # TODO: response = api_post("/mri", req.json(), authorization)
+        temp_directory.cleanup()
+
+    # TODO: skip patient, study, series already imported in "api" database
