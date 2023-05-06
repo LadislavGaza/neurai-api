@@ -1,9 +1,8 @@
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import subqueryload
-
-from typing import Iterable
-from datetime import date
+from typing import Iterable 
+from datetime import datetime
 
 import api.db.model as m
 import api.deps.schema as s
@@ -113,11 +112,11 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, screenin
 
 
 async def create_annotation_file(
-    name: str,
-    patient_id: str,
-    user_id: int,
-    mri_id: int,
-    is_ai: bool
+        name: str,
+        patient_id: str,
+        user_id: int,
+        mri_id: int,
+        is_ai: bool
 ) -> int:
     async with AsyncSession(m.engine) as session:
         if name:
@@ -154,8 +153,8 @@ async def create_annotation_file(
 
 
 async def create_patient(
-    patient: s.Patient,
-    user_id: int
+        patient: s.Patient,
+        user_id: int
 ):
     patient_model = m.Patient(
         id=patient.id,
@@ -184,12 +183,30 @@ async def get_annotations_by_mri_and_user(mri_id: int, user_id: int) -> Iterable
     async with AsyncSession(m.engine) as session:
         query = (
             select(m.Annotation)
-            .where(m.Annotation.mri_file_id == mri_id, m.Annotation.created_by == user_id)
+            .where(
+                m.Annotation.mri_file_id == mri_id,
+                m.Annotation.created_by == user_id,
+                m.Annotation.visible == True
+            )
             .order_by(m.Annotation.created_at.desc())
         )
         result = await session.execute(query)
 
     return result.scalars().all()
+
+
+async def get_ai_annotation_by_mri_id(mri_id: int) -> m.Annotation:
+    async with AsyncSession(m.engine) as session:
+        query = (
+            select(m.Annotation)
+            .where(
+                m.Annotation.mri_file_id == mri_id,
+                m.Annotation.is_ai == True
+            )
+        )
+        result = await session.execute(query)
+
+    return result.scalars().first()
 
 
 async def get_annotation_by_id(id: int) -> m.Annotation:
@@ -213,11 +230,11 @@ async def delete_annotation(id: int):
 
 
 async def update_annotation_file(
-    id: int,
-    filename: str,
-    file_id: str,
-    visible: bool,
-    job_name: str = None,
+        id: int,
+        filename: str,
+        file_id: str,
+        visible: bool,
+        job_name: str = None,
 ):
     async with AsyncSession(m.engine) as session:
         stmt = (
@@ -227,6 +244,27 @@ async def update_annotation_file(
                 "filename": filename,
                 "file_id": file_id,
                 "visible": visible,
+                "job_name": job_name
+            })
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
+
+async def update_annotation_uploaded_file(
+        id: int,
+        filename: str,
+        file_id: str,
+        job_name: str = None,
+):
+    async with AsyncSession(m.engine) as session:
+        stmt = (
+            update(m.Annotation)
+            .where(m.Annotation.id == id)
+            .values({
+                "filename": filename,
+                "file_id": file_id,
                 "job_name": job_name
             })
         )
@@ -262,6 +300,7 @@ async def get_running_inferences():
             select(m.Annotation)
             .where(m.Annotation.job_name != None)
             .options(subqueryload(m.Annotation.creator))
+            .options(subqueryload(m.Annotation.mri_file))
         )
         result = await session.execute(query)
 
@@ -287,6 +326,24 @@ async def create_screening(name: str, patient_id: str, user_id: int):
         modified_by=user_id,
     )
     async with AsyncSession(m.engine) as session:
+        if not screening_model.name:
+            query = (
+                select(m.Screening)
+                .where(m.Screening.patient_id == patient_id)
+                .where(m.Screening.name.regexp_match(
+                '^(0[1-9]|[1-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-[0-9]{4} [0-9]+$'
+                ))
+                .order_by(m.Screening.created_at.desc()))
+            result = await session.execute(query)
+            screening = result.scalars().first()
+            # default name for screening is actual date + number
+            stamp = datetime.now().strftime('%d-%m-%Y')
+            if screening and screening.name[len(stamp + ' '):]:
+                highest_number = int(screening.name[len(stamp + ' '):])
+                screening_model.name = f'{stamp} {str(highest_number + 1)}'
+            else:
+                screening_model.name = f'{stamp} 1'
+
         session.add(screening_model)
         await session.commit()
         await session.refresh(screening_model)
@@ -295,8 +352,20 @@ async def create_screening(name: str, patient_id: str, user_id: int):
 
 async def get_screenings_by_patient_and_user(patient_id: str, user_id: int) -> Iterable[m.Screening]:
     async with AsyncSession(m.engine) as session:
+        subquery = (
+            select(m.Annotation.id)
+            .filter(
+                m.Annotation.mri_file_id == m.MRIFile.id,
+                m.MRIFile.screening_id == m.Screening.id,
+                m.Annotation.ready == False,
+                m.Annotation.is_ai == True,
+                m.Annotation.visible == True
+            )
+            .exists()
+        )
         query = (
             select(m.Screening)
+            .add_columns(subquery.label("annotation_in_progress"))
             .where(
                 m.Screening.patient_id == patient_id,
                 m.Screening.created_by == user_id
@@ -304,7 +373,7 @@ async def get_screenings_by_patient_and_user(patient_id: str, user_id: int) -> I
             .order_by(m.Screening.created_at.desc())
         )
         result = await session.execute(query)
-    return result.scalars().all()
+    return result.fetchall()
 
 
 async def get_screenings_series_by_patient_and_user(patient_id: str, user_id: int) -> Iterable[m.Screening]:

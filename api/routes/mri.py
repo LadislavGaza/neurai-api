@@ -1,4 +1,6 @@
+import asyncio
 import base64
+import json
 
 from fastapi import (
     APIRouter,
@@ -8,11 +10,13 @@ from fastapi import (
     Form,
     File,
     UploadFile,
+    Request
 )
 from sqlalchemy.exc import IntegrityError
 
 from typing import List
 from googleapiclient.discovery import build
+from sse_starlette.sse import EventSourceResponse
 
 import api.deps.schema as s
 from api.db import crud
@@ -155,8 +159,13 @@ async def remove_annotation(
     )
 
     try:
-        await crud.delete_annotation(annotation_id)
-        service.files().delete(fileId=annotation.file_id).execute()
+        if annotation.is_ai is True:
+            # soft delete
+            update_values = { "visible": False }
+            await crud.update_annotation_details(annotation_id, update_values)
+        else:
+            await crud.delete_annotation(annotation_id)
+            service.files().delete(fileId=annotation.file_id).execute()
     except Exception:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -194,3 +203,51 @@ async def change_annotation(
             content={"message": translation["annotation_name_exists"]},
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.patch(
+    "/{mri_id}/ai_annotation",
+    response_model=s.Annotation,
+    dependencies=[Depends(validate_api_token)]
+)
+async def request_ai_annotation_visibility(
+    mri_id: int,
+    user_id: int = Depends(validate_api_token),
+    translation=Depends(get_localization_data)
+):
+    mri = await utils.verify_file_creator(
+        mri_id,
+        user_id,
+        "mri",
+        translation
+    )
+    try:
+        annotation = await crud.get_ai_annotation_by_mri_id(mri.id)
+        # tu moze nastat viacero pripadov, kedy by sme mohli spustat inferenciu:
+        # 1. v DB nie je zaznam o AI anotacii
+        # 2. v DB je, ale nema file a job je ''
+        # mozno este 3. ma file, ale neda sa najst na Drive, lebo bol zmazany
+        update_values = { "visible": True }
+        await crud.update_annotation_details(annotation.id, update_values)
+
+    except Exception:
+        raise APIException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"message": translation["annotation_not_found"]},
+        )
+    return annotation
+
+
+@router.get("/annotations/inference")
+async def ai_annotation_visible(
+    request: Request,
+    user_id: int = Depends(validate_api_token),
+):
+    request.app.clients[user_id] = asyncio.Queue()
+
+    async def check_for_processed_ai():
+        while True:
+            message = await request.app.clients[user_id].get()
+            yield json.dumps(message)
+
+    return EventSourceResponse(check_for_processed_ai())

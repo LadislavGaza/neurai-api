@@ -13,6 +13,7 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship
 )
+from sqlalchemy.ext.hybrid import hybrid_property
 
 
 DB_URL = os.environ.get("DB_URL")
@@ -36,7 +37,8 @@ class User(Base):
     mri_files = relationship(
         'MRIFile',
         foreign_keys='[MRIFile.created_by]',
-        back_populates='creator'
+        back_populates='creator',
+        order_by='MRIFile.created_at.desc()'
     )
     annotations = relationship(
         'Annotation',
@@ -189,6 +191,6 @@ class Annotation(Base):
         MRIFile, foreign_keys=[mri_file_id], back_populates='annotations'
     )
 
-    @property
+    @hybrid_property
     def ready(self):
         return self.job_name == None

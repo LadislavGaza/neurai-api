@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, File, UploadFile, status
@@ -7,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 import api.deps.schema as s
 from api.db import crud
-from api.deps import utils, upload
+from api.deps import utils, upload, const
 from api.deps.auth import validate_api_token, validate_drive_token
 from api.deps.utils import APIException, get_localization_data
 
@@ -103,10 +102,15 @@ async def patient_screenings(
         patient_id=patient_id,
         user_id=user_id
     )
+    screenings_out = []
+    for (screening, in_progress) in screenings:
+        item = vars(screening)
+        item["annotation_in_progress"] = in_progress
+        screenings_out.append(item)
 
     return {
         "patient": patient,
-        "screenings": screenings
+        "screenings": screenings_out
     }
 
 
@@ -178,9 +182,6 @@ async def create_screening(
     user_id: int = Depends(validate_api_token),
     translation=Depends(get_localization_data)
 ):
-    # default name for screening is actual date
-    if not screening.name:
-        screening.name = datetime.now().strftime('%d-%m-%Y')
 
     try:
         new_screening = await crud.create_screening(
@@ -188,6 +189,8 @@ async def create_screening(
             patient_id=patient_id,
             user_id=user_id
         )
+        new_screening = vars(new_screening)
+        new_screening["annotation_in_progress"] = False
     except IntegrityError:
         raise APIException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -218,8 +221,10 @@ async def upload_mri(
     mri = await upload.mri_upload(
         files, creds, screening.patient_id, screening_id, user_id, translation
     )
-    await upload.mri_auto_annotate(
-        mri, screening.patient_id, user_id, translation
-    )
+
+    if const.AZUREML.ENABLED == True:
+        await upload.mri_auto_annotate(
+            mri, screening.patient_id, user_id, translation
+        )
 
     return {"mri_files": [mri]}

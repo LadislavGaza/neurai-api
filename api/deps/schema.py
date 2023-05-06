@@ -61,7 +61,6 @@ class Annotation(BaseModel):
     name: str
     is_ai: bool
     ready: bool
-    visible: bool
 
     class Config:
         orm_mode = True
@@ -82,6 +81,7 @@ class RenameMRI(BaseModel):
 class AnnotationEdit(BaseModel):
     name: str | None
     visible: bool | None
+
 
 class PatientFiles(BaseModel):
     mri_files: List[MRIFile]
@@ -119,9 +119,7 @@ class ScreeningInfo(BaseModel):
     name: str
     created_at: datetime
     modified_at: datetime
-
-    class Config:
-        orm_mode = True
+    annotation_in_progress: bool
 
 
 class PatientDetailScreenings(BaseModel):
