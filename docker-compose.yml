@@ -26,7 +26,7 @@ services:
       - "./site_api/config/api.env"
     volumes:
       - ./site_api:/neurai/site_api
-      - ./site_api/sqlite:/neurai/db:rw
+      - sqlite_data:/neurai/sqlite
       - logs_site_api:/var/log/
     depends_on:
       db:
@@ -68,6 +68,7 @@ secrets:
 
 volumes:
   pgdata:
+  sqlite_data:
   orthanc-storage:
   logs_api:
   logs_site_api:

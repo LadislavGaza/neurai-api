@@ -1,5 +1,5 @@
 #!/bin/bash
 
-alembic -c site_api/config/alembic.ini -x data=true upgrade head
-
-gunicorn -k uvicorn.workers.UvicornWorker -c site_api/config/gunicorn.conf.py site_api.main:app
+rm -rf /neurai/sqlite && mkdir -p /neurai/sqlite
+sqlite3 /neurai/sqlite/neurai.db ""
+alembic -c /neurai/site_api/config/alembic.ini -x data=true upgrade head
