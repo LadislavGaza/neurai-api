@@ -178,7 +178,8 @@ async def mri_upload(
     patient_id: str,
     screening_id: int,
     user_id: int,
-    translation
+    translation,
+    series_uid: str = None
 ):
     new_file = file_upload(files, creds, translation)
     new_file["id"] = await crud.create_mri_file(
@@ -187,6 +188,7 @@ async def mri_upload(
         patient_id=patient_id,
         screening_id=screening_id,
         user_id=user_id,
+        series_uid=series_uid
     )
 
     return new_file

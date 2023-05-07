@@ -36,6 +36,7 @@ async def get_mri_files_and_annotations_per_screening(user, files, screening_id)
             mri_files.append({
                 "id": file.id,
                 "name": file.filename,
+                "series_uid": file.series_uid,
                 "created_at": file.created_at,
                 "modified_at": file.modified_at,
                 "annotation_files": annotations

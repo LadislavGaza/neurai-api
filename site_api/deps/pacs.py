@@ -23,7 +23,7 @@ from pynetdicom.sop_class import (
 from pydicom.dataset import Dataset
 from pydicom.filewriter import write_file_meta_info
 from pynetdicom.dsutils import encode
-# DO NOT DELETE - DICOM C-GET WILL FAIL!!!
+# !!! DO NOT DELETE - DICOM C-GET WILL FAIL!!!
 from pydicom.uid import DeflatedExplicitVRLittleEndian
 
 from site_api.deps import utils
@@ -117,13 +117,12 @@ class PACSClient:
                 continue
 
             item = {
-                field: self._attribute_parse(
-                    field, getattr(identifier, field)
-                )
+                field: self._attribute_parse(field, getattr(identifier, field))
                 for field in self.PATIENT_METADATA.keys()
                 if hasattr(identifier, field)
             }
             results.append(item)
+
         assoc.release()
         results_renamed = []
         for patient in results:
@@ -131,24 +130,34 @@ class PACSClient:
                 patient,
                 self.PATIENT_METADATA
             )
-            if patient_mapped['birth_date']:
-                patient_mapped['birth_date'] = datetime.strptime(patient_mapped['birth_date'], "%Y%m%d").strftime("%d.%m.%Y")
+            if patient_mapped["birth_date"]:
+                patient_mapped["birth_date"] = (
+                    datetime
+                    .strptime(patient_mapped["birth_date"], "%Y%m%d")
+                    .strftime("%d.%m.%Y")
+                )
             else:
-                patient_mapped['birth_date'] = None
+                patient_mapped["birth_date"] = None
             results_renamed.append(patient_mapped)
 
         return results_renamed
 
-    def download(self, series_uid: str, folder: str) -> bool:
+    def download(self, series_uid: str, folder: str) -> dict:
         self.ae = AE()
         ext_neg = self._export_role_selection()
         query_model = StudyRootQueryRetrieveInformationModelGet
 
         ds = Dataset()
         ds.QueryRetrieveLevel = "SERIES"
-        ds.PatientID = ""
-        ds.StudyInstanceUID = ""
+        ds.Modality = "MR"
+        
+        # Retrieve complete metadata alongside series
+        for field in self.METADATA:
+            setattr(ds, field, "")
         ds.SeriesInstanceUID = series_uid
+
+        # !!! WARNING: Is modified asynchronously by c-get event handler
+        item = []
 
         # Request association with remote
         assoc = self.ae.associate(
@@ -156,20 +165,20 @@ class PACSClient:
             self.port,
             ae_title=self.ae_title,
             ext_neg=ext_neg,
-            evt_handlers=[(evt.EVT_C_STORE, self._handle_store, [folder])],
+            evt_handlers=[(evt.EVT_C_STORE, self._handle_store, [folder, item])],
             max_pdu=16382
         )
         if not assoc.is_established:
             return False
 
         responses = assoc.send_c_get(ds, query_model)
-        for (status, rsp_identifier) in responses:
+        for (status, identifier) in responses:
             if status and status.Status in [0xFF00, 0xFF01]:
-                # to be added processing of response?
                 pass
 
         assoc.release()
-        return True
+
+        return item[0] if item else {}
 
     def _dicom_series_group_by_patient(self, series, existing_studies):
         # Reorganize hierarchically, IDs are assumed to be required fields
@@ -271,7 +280,7 @@ class PACSClient:
         filename = f"{mode_prefix}.{sop_instance}"
         return filename
 
-    def _handle_store(self, event, output_directory):
+    def _handle_store(self, event, output_directory, item):
         # if args.ignore:
         #    return 0x0000
         try:
@@ -284,7 +293,14 @@ class PACSClient:
         # Add the file meta information elements
         ds.file_meta = event.file_meta
 
-
+        item.append({
+            field: self._attribute_parse(
+                field, getattr(ds, field)
+            )
+            for field in self.METADATA
+            if hasattr(ds, field)
+        })
+ 
         filename = self._dicom_parse_filename(ds)
 
         status_ds = Dataset()

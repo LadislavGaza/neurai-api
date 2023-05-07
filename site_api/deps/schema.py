@@ -16,7 +16,7 @@ class Patient(BaseModel):
     id: str
     forename: str
     surname: str
-    birth_date: date
+    birth_date: date | None
 
     class Config:
         orm_mode = True

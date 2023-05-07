@@ -318,9 +318,10 @@ async def update_mri_name(id: int, name: str):
         await session.commit()
 
 
-async def create_screening(name: str, patient_id: str, user_id: int):
+async def create_screening(name: str, uid: str, patient_id: str, user_id: int):
     screening_model = m.Screening(
         name=name,
+        study_uid=uid,
         patient_id=patient_id,
         created_by=user_id,
         modified_by=user_id,
