@@ -11,10 +11,14 @@ services:
       - "site_api/config/api.env"
     volumes:
       - /var/log/neurai-internal:/var/log/neurai
-      - ./site_api/sqlite:/neurai/db:rw
+      - sqlite_data:/neurai/sqlite
     networks:
       - be
     restart: always
+
+volumes:
+  sqlite_data:
+
 
 networks:
   be:
