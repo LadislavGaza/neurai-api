@@ -1,13 +1,21 @@
-## NeurAI REST API Backend
+# NeurAI REST API Backend
 
 Build with Python language and FastAPI web framework. It runs in ASGI web server Gunicorn
 
-#### Development build
+## Development build
 
 Set correct environment variables by using configuration templates from subfolder. Then run following commands:
 ```bash
 docker-compose build
 docker-compose up
+```
+
+On first run migrations have to be executed:
+```bash
+docker-compose exec api bash
+$ /entrypoint.sh
+docker-compose exec site_api bash
+$ /entrypoint.sh
 ```
 
 Then, app has to be authorized with Azure ML:
@@ -21,7 +29,7 @@ docker-compose exec api bash
 
 
 
-#### Generate migrations
+## Generate migrations
 
 Database should be accessible on URL set by environment variable  `DB_URL`.
 
@@ -44,7 +52,7 @@ alembic -c site_api/config/alembic.ini revision --autogenerate -m "message"
 ```
 
 
-#### Run migrations
+## Run migrations
 
 Execute into container and run alembic. Environment variable should already be set.
 ```bash

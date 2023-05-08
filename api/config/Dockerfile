@@ -7,7 +7,8 @@ WORKDIR /neurai
 COPY api ./api
 RUN pip install -r api/config/requirements.txt
 
-EXPOSE 8080
-ENTRYPOINT ["/bin/sh", "-c" , "alembic -c api/config/alembic.ini -x data=true upgrade head && python -m api.main"]
+COPY api/config/entrypoint.sh /
+RUN chmod +x /entrypoint.sh
 
-# ENTRYPOINT ["/bin/sh", "-c" , "alembic -c api/config/alembic.ini -x data=true upgrade head && gunicorn -k uvicorn.workers.UvicornWorker -c api/config/gunicorn.conf.py api.main:app"]
+EXPOSE 8080
+ENTRYPOINT ["python", "-m", "api.main"]

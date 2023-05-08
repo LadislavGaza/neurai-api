@@ -36,6 +36,7 @@ async def get_mri_files_and_annotations_per_screening(user, files, screening_id)
             mri_files.append({
                 "id": file.id,
                 "name": file.filename,
+                "series_uid": file.series_uid,
                 "created_at": file.created_at,
                 "modified_at": file.modified_at,
                 "annotation_files": annotations
@@ -51,7 +52,7 @@ def generate_unique_patient_id():
 def get_existing_files_per_user(files, drive_files):
     annotation_files = []
     drive_file_ids = [record["id"] for record in drive_files]
-    for file in annotations:
+    for file in files:
         if (file.file_id in drive_file_ids) or (file.is_ai):
             annotation_files.append(file)
 

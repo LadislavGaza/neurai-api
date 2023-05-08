@@ -75,7 +75,7 @@ async def patient(
     if patient is None:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": translation["patient_not_exist"]}
+            content={"message": translation["patient_not_exists"]}
         )
 
     return patient
@@ -95,7 +95,7 @@ async def patient_screenings(
     if patient is None:
         raise APIException(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": translation["patient_not_exist"]},
+            content={"message": translation["patient_not_exists"]},
         )
 
     screenings = await crud.get_screenings_by_patient_and_user(
@@ -182,10 +182,10 @@ async def create_screening(
     user_id: int = Depends(validate_api_token),
     translation=Depends(get_localization_data)
 ):
-
     try:
         new_screening = await crud.create_screening(
             name=screening.name,
+            uid=screening.uid,
             patient_id=patient_id,
             user_id=user_id
         )
@@ -211,6 +211,49 @@ async def upload_mri(
     files: List[UploadFile] = File(...),
     translation=Depends(get_localization_data)
 ):
+    mri = await pacs_mri_upload(
+        screening_id=screening_id,
+        user_id=user_id,
+        creds=creds,
+        files=files,
+        translation=translation
+    )
+
+    return {"mri_files": [mri]}
+
+
+@router.post(
+    "/screening/{screening_id}/files/{series_uid}",
+    response_model=s.PatientFiles
+)
+async def upload_mri(
+    screening_id: int,
+    series_uid: str,
+    user_id: int = Depends(validate_api_token),
+    creds=Depends(validate_drive_token),
+    files: List[UploadFile] = File(...),
+    translation=Depends(get_localization_data)
+):
+    mri = await pacs_mri_upload(
+        screening_id=screening_id,
+        series_uid=series_uid,
+        user_id=user_id,
+        creds=creds,
+        files=files,
+        translation=translation
+    )
+
+    return {"mri_files": [mri]}
+
+
+async def pacs_mri_upload(
+    screening_id: int,
+    user_id,
+    creds,
+    files,
+    translation,
+    series_uid: str = None,
+):
     screening = await crud.get_screening_by_id_and_user(screening_id, user_id)
     if screening is None:
         raise APIException(
@@ -219,12 +262,18 @@ async def upload_mri(
         )
 
     mri = await upload.mri_upload(
-        files, creds, screening.patient_id, screening_id, user_id, translation
+        files,
+        creds,
+        screening.patient_id, 
+        screening_id, 
+        user_id, 
+        translation,
+        series_uid
     )
 
-    if const.AZUREML.ENABLED == True:
+    if const.AZUREML.ENABLED is True:
         await upload.mri_auto_annotate(
             mri, screening.patient_id, user_id, translation
         )
 
-    return {"mri_files": [mri]}
+    return mri

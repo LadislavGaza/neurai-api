@@ -52,6 +52,7 @@ class AuthorizationCode(BaseModel):
 class MRIFile(BaseModel):
     id: int
     name: str
+    series_uid: str | None
     created_at: datetime
     modified_at: datetime
 
@@ -112,11 +113,13 @@ class GoogleFiles(BaseModel):
 
 class Screening(BaseModel):
     name: str | None
+    uid: str | None
 
 
 class ScreeningInfo(BaseModel):
     id: int
     name: str
+    study_uid: str | None
     created_at: datetime
     modified_at: datetime
     annotation_in_progress: bool
