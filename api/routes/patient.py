@@ -211,7 +211,7 @@ async def upload_mri(
     files: List[UploadFile] = File(...),
     translation=Depends(get_localization_data)
 ):
-    mri = pacs_mri_upload(
+    mri = await pacs_mri_upload(
         screening_id=screening_id,
         user_id=user_id,
         creds=creds,
