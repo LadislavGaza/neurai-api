@@ -1,7 +1,7 @@
 # https://book.orthanc-server.com/users/docker-osimis.html
 version: "3"
 services:
-  orthanc:
+  pacs:
     image: osimis/orthanc
     restart: unless-stopped
     ports:
@@ -9,16 +9,23 @@ services:
       - "8010:8010"
     volumes:
       - "orthanc-storage:/var/lib/orthanc/db:Z"
+    networks:
+      - be
     environment:
       VERBOSE_ENABLED: "true"
       VERBOSE_STARTUP: "true"
-      # ORTHANC_JSON: |
     secrets:
-        - "orthanc.secret.json"
+        - "orthanc.json"
 
 secrets:
-  orthanc.secret.json:
-    file: orthanc.secret.json
+  orthanc.json:
+    file: site_api/config/orthanc.json
 
 volumes:
   orthanc-storage:
+
+
+networks:
+  be:
+    external:
+      name: neurai-be-network
