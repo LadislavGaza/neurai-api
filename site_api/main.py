@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 from logging.config import dictConfig
 from typing import List
+from datetime import date
 
 from fastapi import (
     FastAPI,
@@ -12,7 +13,8 @@ from fastapi import (
     Depends,
     status,
     HTTPException,
-    BackgroundTasks
+    BackgroundTasks,
+    Response
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -268,7 +270,21 @@ async def pacs_search_studies(
 @app.post("/pacs/mri")
 async def pacs_export(
     mri_file_uids: List[str],
+    background_tasks: BackgroundTasks,
     authorization: str | None = Header(default=None)
+):
+    background_tasks.add_task(
+        pacs_export_task, 
+        mri_file_uids,
+        authorization
+    )
+
+    return Response(status_code=status.HTTP_200_OK)
+
+
+async def pacs_export_task(
+    mri_file_uids,
+    authorization
 ):
     pacs = PACSClient(const.PACS.IP, const.PACS.PORT, const.PACS.AE_TITLE)
 
@@ -276,10 +292,6 @@ async def pacs_export(
         temp_directory = tempfile.TemporaryDirectory()
         temp_dir_path = Path(temp_directory.name)  
         metadata = pacs.download(uid, temp_dir_path)
-
-        print("PatientID", metadata["PatientID"], flush=True)
-        print("StudyInstanceUID", metadata["StudyInstanceUID"], flush=True)
-        print("SeriesInstanceUID", metadata["SeriesInstanceUID"], flush=True)
 
         # Import patient and skip if exists
         patient_id = metadata["PatientID"]
@@ -289,8 +301,8 @@ async def pacs_export(
             new_patient = s.Patient(
                 id=patient_id, 
                 forename="",
-                surname=metadata["PatientName"],
-                birth_date=metadata["PatientBirthDate"]
+                surname=metadata.get("PatientName", "Jozko Bombicka"),
+                birth_date=metadata.get("PatientBirthDate", date(1900, 3, 13))
             )
             new_patient = await add_patient(new_patient, authorization)
     
@@ -298,19 +310,19 @@ async def pacs_export(
         resp = api_get(f"/patient/{patient_id}/screening", authorization)
         studies_uids = {
             s["study_uid"]: s["id"]
-            for s in response.json()["screenings"] 
+            for s in resp.json()["screenings"] 
             if s["study_uid"]
         }
-        print("StudyUIDs", studies_uids, flush=True)
-        print(study_uid not in studies_uids.keys())
+        
 
         study_uid = metadata["StudyInstanceUID"]
+
         if study_uid not in studies_uids.keys():
             # Screening with UID does not exist, you have to create one
             new_screening = {"uid": study_uid}
             response = api_post(
                 f"/patient/{patient_id}/screening", 
-                new_screening.json(),
+                json.dumps(new_screening),
                 authorization
             )
             screening_id = response.json()["id"]
@@ -320,12 +332,16 @@ async def pacs_export(
         # Check if series already exists, if it does skip import
         resp = api_get(f"/screening/{screening_id}/files", authorization)
         series_uids = set([
-            s["series_uid"] for s in response.json()["mri_files"] 
+            s["series_uid"] for s in resp.json()["mri_files"] 
         ])
         series_uid = metadata["SeriesInstanceUID"]
         if series_uid not in series_uids:
-            files = [open(fname, 'rb') for fname in os.listdir(temp_dir_path)]
-            response = api_post(
+            files = [
+                    ('files', open(os.path.join(temp_dir_path, fname), 'rb'))
+                    for fname in os.listdir(temp_dir_path)
+            ]
+
+            response = api_upload(
                 f"/screening/{screening_id}/files/{series_uid}", 
                 files, 
                 authorization

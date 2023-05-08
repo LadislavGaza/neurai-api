@@ -95,7 +95,7 @@ async def get_patient_by_id(patient_id: str) -> m.Patient:
     return result.scalars().first()
 
 
-async def create_mri_file(filename: str, file_id: str, patient_id: str, screening_id: int, user_id: int):
+async def create_mri_file(filename: str, file_id: str, patient_id: str, screening_id: int, user_id: int, series_uid: str):
     mri_file_model = m.MRIFile(
         filename=filename,
         file_id=file_id,
@@ -103,6 +103,7 @@ async def create_mri_file(filename: str, file_id: str, patient_id: str, screenin
         screening_id=screening_id,
         created_by=user_id,
         modified_by=user_id,
+        series_uid=series_uid
     )
     async with AsyncSession(m.engine) as session:
         session.add(mri_file_model)

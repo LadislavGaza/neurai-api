@@ -52,7 +52,7 @@ class AuthorizationCode(BaseModel):
 class MRIFile(BaseModel):
     id: int
     name: str
-    series_uid: str
+    series_uid: str | None
     created_at: datetime
     modified_at: datetime
 

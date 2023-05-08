@@ -211,61 +211,17 @@ async def upload_mri(
     files: List[UploadFile] = File(...),
     translation=Depends(get_localization_data)
 ):
-    screening = await crud.get_screening_by_id_and_user(screening_id, user_id)
-    if screening is None:
-        raise APIException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": translation["screening_not_found"]},
-        )
-
-    mri = await upload.mri_upload(
-        files, creds, screening.patient_id, screening_id, user_id, translation
+    mri = pacs_mri_upload(
+        screening_id=screening_id,
+        user_id=user_id,
+        creds=creds,
+        files=files,
+        translation=translation
     )
-
-    if const.AZUREML.ENABLED is True:
-        await upload.mri_auto_annotate(
-            mri, screening.patient_id, user_id, translation
-        )
 
     return {"mri_files": [mri]}
 
 
-@router.post(
-    "/screening/{screening_id}/files",
-    response_model=s.PatientFiles
-)
-async def upload_mri(
-    screening_id: int,
-    user_id: int = Depends(validate_api_token),
-    creds=Depends(validate_drive_token),
-    files: List[UploadFile] = File(...),
-    translation=Depends(get_localization_data)
-):
-    screening = await crud.get_screening_by_id_and_user(screening_id, user_id)
-    if screening is None:
-        raise APIException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"message": translation["screening_not_found"]},
-        )
-
-    mri = await upload.mri_upload(
-        files,
-        creds,
-        screening.patient_id, 
-        screening_id, 
-        user_id, 
-        translation
-    )
-
-    if const.AZUREML.ENABLED == True:
-        await upload.mri_auto_annotate(
-            mri, screening.patient_id, user_id, translation
-        )
-
-    return {"mri_files": [mri]}
-
-
-# TODO: refactor
 @router.post(
     "/screening/{screening_id}/files/{series_uid}",
     response_model=s.PatientFiles
@@ -277,6 +233,26 @@ async def upload_mri(
     creds=Depends(validate_drive_token),
     files: List[UploadFile] = File(...),
     translation=Depends(get_localization_data)
+):
+    mri = await pacs_mri_upload(
+        screening_id=screening_id,
+        series_uid=series_uid,
+        user_id=user_id,
+        creds=creds,
+        files=files,
+        translation=translation
+    )
+
+    return {"mri_files": [mri]}
+
+
+async def pacs_mri_upload(
+    screening_id: int,
+    user_id,
+    creds,
+    files,
+    translation,
+    series_uid: str = None,
 ):
     screening = await crud.get_screening_by_id_and_user(screening_id, user_id)
     if screening is None:
@@ -295,9 +271,9 @@ async def upload_mri(
         series_uid
     )
 
-    if const.AZUREML.ENABLED == True:
+    if const.AZUREML.ENABLED is True:
         await upload.mri_auto_annotate(
             mri, screening.patient_id, user_id, translation
         )
 
-    return {"mri_files": [mri]}
+    return mri

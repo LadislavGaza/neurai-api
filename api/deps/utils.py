@@ -52,7 +52,7 @@ def generate_unique_patient_id():
 def get_existing_files_per_user(files, drive_files):
     annotation_files = []
     drive_file_ids = [record["id"] for record in drive_files]
-    for file in annotations:
+    for file in files:
         if (file.file_id in drive_file_ids) or (file.is_ai):
             annotation_files.append(file)
 
