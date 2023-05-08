@@ -100,8 +100,7 @@ class PACSClient:
         self.ae.add_requested_context(PatientRootQueryRetrieveInformationModelFind)
         ds = Dataset()
         ds.QueryRetrieveLevel = "STUDY"
-
-        query["PatientName"] = f"*{query.get('PatientName', '')}*"
+        query["PatientName"] = f"*{query.get('PatientName', '') or ''}*"
         for field in self.PATIENT_METADATA.keys():
             setattr(ds, field, query.get(field, ""))
 
@@ -130,14 +129,8 @@ class PACSClient:
                 patient,
                 self.PATIENT_METADATA
             )
-            if patient_mapped["birth_date"]:
-                patient_mapped["birth_date"] = (
-                    datetime
-                    .strptime(patient_mapped["birth_date"], "%Y%m%d")
-                    .strftime("%d.%m.%Y")
-                )
-            else:
-                patient_mapped["birth_date"] = None
+            if not patient_mapped['birth_date']:
+                patient_mapped['birth_date'] = None
             results_renamed.append(patient_mapped)
 
         return results_renamed
